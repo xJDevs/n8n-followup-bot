@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+
+# Secrets and local tooling — never commit
+.env
+*.env
+.env.*
+.mcp.json
+.claude/
+.codex/
+
+# Local exports of a live instance (may contain credentials or patient data)
+backups/
+exports/

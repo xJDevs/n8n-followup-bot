@@ -1,0 +1,557 @@
+{
+  "active": false,
+  "connections": {
+    "Accept": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Anomaly?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Anomaly?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Anomaly Alert",
+            "type": "main"
+          }
+        ],
+        []
+      ]
+    },
+    "Body To Text": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Secret",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Classify Result": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Accept",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Compute HMAC": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Valid Signature?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Map Status": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Ours?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Ours?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Update Record",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Accept",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Prepare Signature": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Compute HMAC",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Reject": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Rejection Reason",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Rejection Reason": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Rejection Alert",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Secret": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Prepare Signature",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Update Record": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Classify Result",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Valid Signature?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Map Status",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Reject",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "YCloud Webhook": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Body To Text",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "description": null,
+  "id": "WfDeliveryHook01",
+  "isArchived": false,
+  "name": "Followup | Delivery Webhook",
+  "nodes": [
+    {
+      "id": "wh-ycloud",
+      "name": "YCloud Webhook",
+      "notes": "rawBody ON: the raw body lands in binary.data. $json.body comes REPACKAGED (1.10 -> 1.1) and is NOT usable for signing. See design W-E.",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {
+          "rawBody": true
+        },
+        "path": "ycloud-delivery-CHANGE-ME-random-suffix",
+        "responseMode": "responseNode"
+      },
+      "position": [
+        -1200,
+        0
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "webhookId": "00000000-0000-4000-8000-000000000008"
+    },
+    {
+      "id": "wh-text",
+      "name": "Body To Text",
+      "notes": "Turns binary.data into text without parsing it. The native node is used instead of Buffer in a Code node so as not to depend on how n8n stores binaries.",
+      "parameters": {
+        "binaryPropertyName": "data",
+        "destinationKey": "body_text",
+        "operation": "text",
+        "options": {
+          "encoding": "utf8"
+        }
+      },
+      "position": [
+        -980,
+        0
+      ],
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1
+    },
+    {
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "wh-secret",
+      "name": "Secret",
+      "notes": "W-D: the secret lives in bot.config, not in the workflow JSON. NO alwaysOutputData on purpose (W-I): if the database fails or the row is missing, this has to blow up so n8n answers 500 and fires the Error Manager.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "select value from bot.config where name = 'ycloud_webhook_secret';"
+      },
+      "position": [
+        -760,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "id": "wh-prepare",
+      "name": "Prepare Signature",
+      "notes": "Does not compute the HMAC: that is the native Crypto node (W-B). Here the header is only parsed and the text to sign is built.",
+      "parameters": {
+        "jsCode": "// Header: YCloud-Signature: t=<unix_seconds>,s=<signature>\n// The HMAC is computed over ts + '.' + the RAW body (W-E).\nconst body_text = String($('Body To Text').first().json.body_text ?? '');\nconst headers   = $('YCloud Webhook').first().json.headers ?? {};\nconst raw       = String(headers['ycloud-signature'] ?? '');\n\nconst parts = {};\nfor (const p of raw.split(',')) {\n  const i = p.indexOf('=');\n  if (i > 0) parts[p.slice(0, i).trim()] = p.slice(i + 1).trim();\n}\n\nconst ts                = String(parts.t ?? '');\nconst receivedSignature = String(parts.s ?? '');\n\nconst now       = Math.floor(Date.now() / 1000);\nconst tsNum     = Number(ts);\nconst deviation = Number.isFinite(tsNum) && ts !== ''\n  ? Math.abs(now - tsNum)\n  : Number.MAX_SAFE_INTEGER;\n\nreturn [{ json: {\n  body_text,\n  ts,\n  received_signature: receivedSignature,\n  deviation,\n  has_signature: ts !== '' && receivedSignature !== '',\n  to_sign: ts + '.' + body_text,\n}}];"
+      },
+      "position": [
+        -540,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "wh-hmac",
+      "name": "Compute HMAC",
+      "notes": "W-B: native node, not crypto.createHmac in a Code node (require depends on the instance allow-list). If the signature does not match, W-E gives the order to rule out causes: first the encoding (hex vs base64), then the secret, and only at the end the body.",
+      "parameters": {
+        "action": "hmac",
+        "binaryData": false,
+        "dataPropertyName": "computed_signature",
+        "encoding": "hex",
+        "secret": "={{ $('Secret').first().json.value }}",
+        "type": "SHA256",
+        "value": "={{ $json.to_sign }}"
+      },
+      "position": [
+        -320,
+        0
+      ],
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1
+    },
+    {
+      "id": "wh-if-signature",
+      "name": "Valid Signature?",
+      "notes": "The three conditions in AND. The 300 s tolerance (W-C) rejects an old replay even if its signature is authentic.",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-has",
+              "leftValue": "={{ $json.has_signature }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            },
+            {
+              "id": "c-signature",
+              "leftValue": "={{ $json.computed_signature.toLowerCase() }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "={{ $json.received_signature.toLowerCase() }}"
+            },
+            {
+              "id": "c-time",
+              "leftValue": "={{ $json.deviation }}",
+              "operator": {
+                "operation": "lte",
+                "type": "number"
+              },
+              "rightValue": 300
+            }
+          ],
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        -100,
+        0
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "id": "wh-reject",
+      "name": "Reject",
+      "notes": "EXPLICIT 401 and a sanitized body: it does not say which of the two conditions failed, which would only save work for whoever is probing. The detail goes to the alert.",
+      "parameters": {
+        "options": {
+          "responseCode": 401
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false }) }}"
+      },
+      "position": [
+        120,
+        200
+      ],
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1
+    },
+    {
+      "id": "wh-reason",
+      "name": "Rejection Reason",
+      "parameters": {
+        "jsCode": "// The reason goes to the alert, NOT to the HTTP response.\n// Telling signature apart from tolerance is what avoids chasing the HMAC\n// when the problem is the host clock (W-C).\nconst j = $input.first().json ?? {};\nconst h = $('YCloud Webhook').first().json.headers ?? {};\n\nlet reason;\nif (!j.has_signature)          reason = 'no YCloud-Signature header, or malformed';\nelse if (j.deviation > 300)    reason = 'timestamp out of tolerance (' + j.deviation + ' s) - check the n8n host clock';\nelse                           reason = 'the signature does not match';\n\nconst text = 'WEBHOOK REJECTED - 401\\n\\n'\n  + 'Reason: ' + reason + '\\n'\n  + 'IP: ' + String(h['x-forwarded-for'] ?? 'unknown') + '\\n'\n  + 'The database was not touched.';\n\nreturn [{ json: { text, reason } }];"
+      },
+      "position": [
+        340,
+        200
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Telegram"
+        }
+      },
+      "id": "wh-alert-reject",
+      "name": "Rejection Alert",
+      "notes": "INV-15 by another route: see the note on 'Anomaly Alert'. Goes AFTER the Respond node so it does not delay the HTTP response.",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;') }}"
+      },
+      "position": [
+        560,
+        200
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "wh-map",
+      "name": "Map Status",
+      "notes": "W-F. A message WITHOUT externalId is not from the bot (someone sent it from the YCloud inbox): it is ignored silently. The unknown-key alert is kept only for an externalId that is present but not in bot.sends, which is the serious case.",
+      "parameters": {
+        "jsCode": "// W-F. The payload comes from outside: only known fields are read, and they are trimmed.\nconst b = $('YCloud Webhook').first().json.body ?? {};\nconst m = b.whatsappMessage ?? {};\nconst type   = String(b.type ?? '');\nconst status = String(m.status ?? '');\n\n// read also counts as delivered: the patient opened it, so it arrived.\n// NO separate 'read' status is added: it would force touching the table's check\n// constraint and every future alert would have to handle it, without deciding anything different.\nconst MAP = { delivered: 'delivered', read: 'delivered', failed: 'failed' };\n\nconst key = String(m.externalId ?? '').slice(0, 200);\nlet action = 'ignore';\nlet newStatus = '';\nlet alert = '';\n\nif (type !== 'whatsapp.message.updated') {\n  // The endpoint subscribed to a single event. If another one arrives, someone changed\n  // the subscription in the YCloud panel and we want to know (INV-12).\n  alert = 'WEBHOOK FOR AN UNSUBSCRIBED EVENT\\n\\nType: ' + type.slice(0, 80)\n        + '\\nThe database was not touched. Check the endpoint subscription in YCloud.';\n} else if (status === 'sent') {\n  action = 'ignore';   // it is what the sender already wrote; rewriting it adds nothing\n} else if (key === '') {\n  // Without an externalId the message is NOT ours: a person wrote it from the YCloud\n  // inbox. There is no row to update and it is not an anomaly, so it is ignored\n  // SILENTLY (correction of 2026-09-08).\n  //\n  // The \"unknown key\" alert is reserved for the different, serious case: an\n  // externalId that DID arrive but is not in bot.sends. Mixing them up raised the\n  // alarm every time someone answered a patient by hand, and an alarm that shouts\n  // routinely teaches people to ignore it.\n  action = 'ignore';\n} else if (MAP[status]) {\n  action = 'update';\n  newStatus = MAP[status];\n} else {\n  alert = 'WEBHOOK WITH AN UNRECOGNIZED STATUS\\n\\nStatus: ' + status.slice(0, 40)\n        + '\\nKey: ' + (key || 'no externalId')\n        + '\\nThe database was not touched (INV-12: visible discard).';\n}\n\nconst isFailure = newStatus === 'failed';\n\nreturn [{ json: {\n  action, status: newStatus, alert, key,\n  ycloud_id:     String(m.id ?? '').slice(0, 100),\n  wamid:         String(m.wamid ?? '').slice(0, 200),\n  error_code:    isFailure ? String(m.errorCode ?? 'NO_CODE').slice(0, 50) : '',\n  error_message: isFailure ? String(m.errorMessage ?? 'no detail').slice(0, 500) : '',\n}}];"
+      },
+      "position": [
+        120,
+        -160
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "wh-if-ours",
+      "name": "Ours?",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-action",
+              "leftValue": "={{ $json.action }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "update"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        340,
+        -160
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "wh-update",
+      "name": "Update Record",
+      "notes": "W-H: monotonicity lives in the WHERE, not in an IF - an IF can be disconnected without anything failing. The three statuses that can advance are explicit: delivered and failed are terminal (the first verdict wins) and reviewed belongs to the operator, it is never overwritten. queryReplacement goes as an ARRAY. NO alwaysOutputData (W-I).",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ [ $json.key, $json.status, $json.ycloud_id, $json.wamid, $json.error_code, $json.error_message ] }}"
+        },
+        "query": "with previous as (\n  select status from bot.sends where unique_key = $1\n), changed as (\n  update bot.sends\n     set status        = $2,\n         ycloud_id     = coalesce(nullif($3, ''), ycloud_id),\n         wamid         = coalesce(nullif($4, ''), wamid),\n         error_code    = case when $2 = 'failed' then nullif($5, '') else error_code end,\n         error_message = case when $2 = 'failed' then nullif($6, '') else error_message end,\n         closed_at     = now()\n   where unique_key = $1\n     and status in ('pending', 'sent', 'ambiguous')\n  returning status\n)\nselect (select status from previous) as previous_status,\n       (select status from changed) as new_status;"
+      },
+      "position": [
+        560,
+        -260
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "id": "wh-classify",
+      "name": "Classify Result",
+      "parameters": {
+        "jsCode": "// The final select ALWAYS returns one row, and that is enough to tell\n// the three outcomes apart without a second query (W-H).\nconst r        = $input.first().json ?? {};\nconst previous = r.previous_status ?? null;\nconst next     = r.new_status      ?? null;\nconst key       = $('Map Status').first().json.key;\nconst newStatus = $('Map Status').first().json.status;\n\nlet alert = '';\n\nif (previous === null) {\n  // The strangest thing that can happen: a SIGNED confirmation arrived for a\n  // key that does not exist. Either a message went out with an externalId that is not\n  // in the database, or someone managed to sign. Either one should ring a bell.\n  alert = 'WEBHOOK WITH AN UNKNOWN KEY\\n\\n'\n        + 'Key: ' + (key || '(empty)') + '\\n'\n        + 'It does not exist in bot.sends. Check: either a message went out with an externalId\\n'\n        + 'that is not in the database, or the endpoint received something we did not send.';\n} else if (next === null && previous === 'reviewed') {\n  alert = 'LATE CONFIRMATION FOR A CASE ALREADY REVIEWED\\n\\n'\n        + 'Key: ' + key + '\\n'\n        + '\"' + newStatus + '\" arrived but you already closed it as reviewed.\\n'\n        + 'Not touched: the state machine never goes backwards. If it has to be reopened, do it by hand.';\n}\n\nreturn [{ json: { key, previous_status: previous, new_status: next, alert } }];"
+      },
+      "position": [
+        780,
+        -260
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "resp-200",
+      "name": "Accept",
+      "notes": "EXPLICIT 200. Also for what was ignored and for what did not advance: if the message arrived and we understood it, the answer is 200 even if nothing was written. The 500 is never fabricated, it is left to fail on its own (W-I).",
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}"
+      },
+      "position": [
+        1000,
+        -160
+      ],
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1
+    },
+    {
+      "id": "wh-if-anomaly",
+      "name": "Anomaly?",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-alert",
+              "leftValue": "={{ $json.alert }}",
+              "operator": {
+                "operation": "notEmpty",
+                "singleValue": true,
+                "type": "string"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1220,
+        -160
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Telegram"
+        }
+      },
+      "id": "wh-alert-anomaly",
+      "name": "Anomaly Alert",
+      "notes": "INV-15 by another route: parse_mode has NO None option, and omitting it does NOT disable parsing - n8n sends Markdown anyway and a key with an odd number of underscores kills the alert with a 400 (confirmed on 2026-09-08). HTML is set and & < > are escaped: that way the underscore is an ordinary character and no key can kill the alert.",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.alert.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;') }}"
+      },
+      "position": [
+        1440,
+        -260
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "settings": {
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "WfErrorManager01",
+    "executionOrder": "v1",
+    "timezone": "America/Costa_Rica"
+  },
+  "tags": []
+}

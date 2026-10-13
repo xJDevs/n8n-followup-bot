@@ -1,0 +1,170 @@
+{
+  "active": false,
+  "connections": {
+    "Test Data": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send To One Patient",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Test Data",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "description": null,
+  "id": "WfTestSend000001",
+  "isArchived": false,
+  "name": "Followup | Test Send · OPEN 24H WINDOW FIRST",
+  "nodes": [
+    {
+      "id": "ts-trigger",
+      "name": "When clicking ‘Execute workflow’",
+      "parameters": {},
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "id": "ts-data",
+      "name": "Test Data",
+      "notes": "Everything configurable is in the 4 constants at the top. The key is generated from the clock, so it can be run as many times as needed without deleting anything from the database.",
+      "parameters": {
+        "jsCode": "// TEST LAUNCHER. Sends a REAL WhatsApp message to the number below, along the same\n// path production uses: it calls 'Followup | Send To Patient', the only workflow\n// that sends. That is on purpose: a demo that does not go through the real path\n// proves nothing.\n//\n// To change anything, change it ONLY up here.\n\nconst PHONE    = '+15555550100';                 // the operator. E.164, with +\nconst NAME     = 'Operator';                     // the template's {{1}}\nconst TEMPLATE = 'followup_20_days_opt1';        // UTILITY: free inside the customer service window\nconst MILESTONE = '20';\n\n// ---------------------------------------------------------------------------\n// Guard: this launcher cannot be used against a patient.\n// patient_id is pinned to 'TEST' and the key carries the TEST_ prefix.\n// If anyone ever wants to reuse this workflow for production, they have\n// to break this by hand — it cannot happen by accident.\n// ---------------------------------------------------------------------------\n\nif (!/^\\+[1-9]\\d{7,14}$/.test(PHONE)) {\n  throw new Error(`The test phone is not E.164: \"${PHONE}\"`);\n}\n\n// A new key on every run, to the second. That way it never collides with a previous one\n// and nothing has to be deleted from the database to test again — deleting a written\n// key is the only thing that can break INV-1 from the outside (INV-17).\nconst stamp = DateTime.now().setZone('America/Costa_Rica').toFormat('yyyy-MM-dd_HHmmss');\n\nreturn [{ json: {\n  unique_key: `TEST_${stamp}`,\n  patient_id: 'TEST',\n  last_name:  'Test',\n  phone:      PHONE,\n  milestone:  MILESTONE,\n  template:   TEMPLATE,\n  params:     [NAME],\n}}];"
+      },
+      "position": [
+        220,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "ts-exec",
+      "name": "Send To One Patient",
+      "notes": "Calls the SAME workflow production uses. The demo goes out along the real path, not a parallel one.",
+      "parameters": {
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Followup | Send To Patient",
+          "mode": "list",
+          "value": "WfSendToPatient1"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "unique_key",
+              "id": "unique_key",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "patient_id",
+              "id": "patient_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "last_name",
+              "id": "last_name",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "phone",
+              "id": "phone",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "milestone",
+              "id": "milestone",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "template",
+              "id": "template",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "params",
+              "id": "params",
+              "required": false,
+              "type": "array"
+            }
+          ],
+          "value": {
+            "last_name": "={{ $json.last_name }}",
+            "milestone": "={{ $json.milestone }}",
+            "params": "={{ $json.params }}",
+            "patient_id": "={{ $json.patient_id }}",
+            "phone": "={{ $json.phone }}",
+            "template": "={{ $json.template }}",
+            "unique_key": "={{ $json.unique_key }}"
+          }
+        }
+      },
+      "position": [
+        440,
+        0
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2
+    }
+  ],
+  "settings": {
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "WfErrorManager01",
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "timezone": "America/Costa_Rica"
+  },
+  "tags": []
+}

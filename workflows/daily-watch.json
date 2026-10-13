@@ -1,0 +1,222 @@
+{
+  "active": false,
+  "connections": {
+    "Daily 11:30": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send Findings",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Error Findings": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Full Envelope",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Full Envelope": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write Report",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Send Findings": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Sends Envelope",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Sends Envelope": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Error Findings",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Write Report": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Notify",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "description": null,
+  "id": "WfDailyWatch0001",
+  "isArchived": false,
+  "name": "Followup | Daily Watch",
+  "nodes": [
+    {
+      "id": "dw-trigger",
+      "name": "Daily 11:30",
+      "notes": "INV-14: its OWN Schedule, independent of the send chain. Hung off the end of the sends, the daily watch would switch off precisely on Sundays and on days without candidates, which is when yesterday's pending cases need reporting. 11:30 because the backup runs at 10:00, so the day's report already includes it. STAYS DISABLED until the group 9 Go/No-Go.",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 11,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "position": [
+        -820,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "dw-send-findings",
+      "name": "Send Findings",
+      "notes": "READ ONLY. alwaysOutputData is CRITICAL: a select with no results returns zero items, and with zero items n8n does not run what follows. The good day -zero stuck cases- would be indistinguishable from n8n being down. That would break INV-13 inside the very workflow that exists to guarantee INV-13.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "with base as (\n  select * from bot.sends\n  where patient_id <> 'TEST'      -- 7.1b: the test launcher leaves one row per demo\n    and status <> 'reviewed'      -- spec 6: it is the only way the operator has to close a case\n)\nselect 'pending' as finding, unique_key, patient_id, last_name, milestone, template,\n       ycloud_id, null::text as detail,\n       round(extract(epoch from (now() - created_at)) / 3600)::int as age_hours\nfrom base\nwhere status = 'pending' and created_at < now() - interval '1 hour'\n\nunion all\n-- 7.1a: ambiguous is measured against CREATED_AT. That status does not write sent_at on\n-- purpose, and comparing against null does not give false: it gives null, and the row is\n-- not selected. Ambiguous rows would never expire.\nselect 'ambiguous_expired', unique_key, patient_id, last_name, milestone, template,\n       ycloud_id, null::text,\n       round(extract(epoch from (now() - created_at)) / 3600)::int\nfrom base\nwhere status = 'ambiguous' and created_at < now() - interval '12 hours'\n\nunion all\nselect 'unconfirmed', unique_key, patient_id, last_name, milestone, template,\n       ycloud_id, null::text,\n       round(extract(epoch from (now() - sent_at)) / 3600)::int\nfrom base\nwhere status = 'sent' and sent_at < now() - interval '12 hours'\n\nunion all\nselect 'failed_24h', unique_key, patient_id, last_name, milestone, template,\n       ycloud_id,\n       coalesce(error_code, 'no code') || ' - ' || coalesce(error_message, 'no detail'),\n       round(extract(epoch from (now() - created_at)) / 3600)::int\nfrom base\nwhere status = 'failed' and created_at > now() - interval '24 hours'\n\nunion all\n-- 6b.1: the failure path wrote the status and LOST the detail. It is our defect,\n-- not the channel's, and that is why it goes as an alert separate from the normal list.\nselect 'failed_no_code', unique_key, patient_id, last_name, milestone, template,\n       ycloud_id, coalesce(error_message, 'no detail'),\n       round(extract(epoch from (now() - created_at)) / 3600)::int\nfrom base\nwhere status = 'failed' and error_code is null\n\nunion all\n-- 5b.1 / V10: the opt1 -> opt2 alternation, detected BY ITS EFFECT on the day it\n-- happens. The previous record is looked up in the WHOLE bot.sends, without excluding\n-- reviewed: a send closed by hand is still history.\nselect 'alternation', e.unique_key, e.patient_id, e.last_name, e.milestone, e.template,\n       e.ycloud_id,\n       'previous: ' || prev.template || ' | now: ' || e.template ||\n         case when prev.template = e.template then ' | REPEATED' else ' | OK' end,\n       round(extract(epoch from (now() - e.created_at)) / 3600)::int\nfrom base e\njoin lateral (\n  select p.template\n  from bot.sends p\n  where p.patient_id = e.patient_id\n    and p.milestone = e.milestone\n    and p.created_at < e.created_at\n  order by p.created_at desc\n  limit 1\n) prev on true\nwhere e.milestone = '20' and e.created_at > now() - interval '24 hours'\n\norder by 1, 2;"
+      },
+      "position": [
+        -600,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "id": "dw-envelope-1",
+      "name": "Sends Envelope",
+      "parameters": {
+        "jsCode": "// THE ENVELOPE (design V-A). Collapses the N rows into ONE item. Without this, a day with 9\n// stuck cases would run everything that follows 9 times -- Telegram included, which\n// would send 9 messages. It is the real failure that cost a rebuild of the orchestrator.\nconst findings = $input.all()\n  .map(i => i.json)\n  .filter(f => f && f.finding);\n\nreturn [{ json: { findings } }];\n"
+      },
+      "position": [
+        -380,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "dw-error-findings",
+      "name": "Error Findings",
+      "notes": "READ ONLY. Receives ONE item from the previous envelope, so it runs a single time.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "-- Rows not notified: the Error Manager design hands picking them up to \"the daily\n-- heartbeat\", and it created the partial index errors_unnotified for this query.\nselect 'error_unnotified' as finding,\n       id::text as ref,\n       workflow,\n       node,\n       message,\n       to_char(occurred_at at time zone 'America/Costa_Rica', 'DD/MM HH24:MI') as occurred\nfrom bot.errors\nwhere not notified\n\nunion all\n-- Count for the day: so that a real firing of the error manager SHOWS in the report.\nselect 'errors_24h', count(*)::text, null, null, null, null\nfrom bot.errors\nwhere occurred_at > now() - interval '24 hours'\n\nunion all\n-- The evidence left by the backup (design B-E). If the row does not exist, this\n-- still returns a row with an empty string, and the Code reads it as NO RECORD.\nselect 'last_backup', coalesce(max(value), ''), null, null, null, null\nfrom bot.config\nwhere name = 'last_backup'\n\norder by 1;"
+      },
+      "position": [
+        -160,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "id": "dw-envelope-2",
+      "name": "Full Envelope",
+      "parameters": {
+        "jsCode": "// Joins the two envelopes and computes the counters. The counters ALWAYS go into the\n// message, complete; the only thing that is capped is the enumeration (design V-R5).\nconst errors   = $input.all().map(i => i.json).filter(f => f && f.finding);\nconst findings = $('Sends Envelope').first().json.findings ?? [];\n\nconst of = (c) => findings.filter(f => f.finding === c);\n\nconst unnotified = errors.filter(e => e.finding === 'error_unnotified');\nconst errors24h  = Number(errors.find(e => e.finding === 'errors_24h')?.ref ?? 0);\nconst mark       = errors.find(e => e.finding === 'last_backup')?.ref ?? '';\n\n// The mark is '<ISO> | <rows> | <object key>'. If it does not exist, the backup never ran.\nlet backup = { status: 'NO RECORD', hours: null, rows: null };\nif (mark) {\n  const [iso, rows] = String(mark).split(' | ');\n  const hours = Math.round(DateTime.now().diff(DateTime.fromISO(iso), 'hours').hours);\n  backup = { status: hours > 24 ? 'STALE' : 'ok', hours, rows };\n}\n\nconst alternation = of('alternation');\n\nreturn [{ json: {\n  date: DateTime.now().setZone('America/Costa_Rica').toFormat('dd/MM/yyyy'),\n  pending:            of('pending'),\n  ambiguous_expired:  of('ambiguous_expired'),\n  unconfirmed:        of('unconfirmed'),\n  failed_24h:         of('failed_24h'),\n  failed_no_code:     of('failed_no_code'),\n  alternation_ok:     alternation.filter(a => String(a.detail).includes('| OK')),\n  alternation_bad:    alternation.filter(a => String(a.detail).includes('REPEATED')),\n  unnotified,\n  errors24h,\n  backup,\n} }];\n"
+      },
+      "position": [
+        60,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "dw-write",
+      "name": "Write Report",
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\n\n// INV-15: EVERYTHING that comes from the database is escaped. Keys carry underscores\n// and error_message is raw channel text; with parse_mode an alert can fall over\n// because of its own content, which is exactly what the invariant forbids.\nconst esc = (s) => String(s ?? '')\n  .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');\n\n// design V-R5: Telegram cuts at 4096 characters. The COUNTERS always go in, complete;\n// what gets truncated is the enumeration, which can be looked up in the database.\nconst CAP = 10;\nconst block = (title, rows, fmt) => {\n  if (!rows.length) return '';\n  const body = rows.slice(0, CAP).map(fmt).join('\\n');\n  const rest = rows.length > CAP ? `\\n... and ${rows.length - CAP} more` : '';\n  return `\\n\\n<b>${esc(title)} (${rows.length})</b>\\n${body}${rest}`;\n};\n\nconst line = (f) =>\n  `- ${esc(f.unique_key)} (${esc(f.last_name)}, milestone ${esc(f.milestone)}) - ${f.age_hours} h` +\n  (f.ycloud_id ? `\\n  id: ${esc(f.ycloud_id)}` : '') +\n  (f.detail ? `\\n  ${esc(f.detail)}` : '');\n\n// Alerts are what calls for action; the rest is a report. The difference is not one of\n// style: a list gets skimmed, an alert gets handled.\nconst alerts = [];\nif (d.ambiguous_expired.length) alerts.push(`${d.ambiguous_expired.length} expired ambiguous send(s): the confirmation is not coming anymore`);\nif (d.failed_no_code.length)    alerts.push(`${d.failed_no_code.length} failed send(s) WITHOUT an error code`);\nif (d.alternation_bad.length)   alerts.push(`${d.alternation_bad.length} case(s) of REPEATED alternation`);\nif (d.unnotified.length)        alerts.push(`${d.unnotified.length} stored error(s) that were NOT notified`);\nif (d.backup.status !== 'ok')   alerts.push(`Backup: ${d.backup.status}`);\n\nconst backupTxt = d.backup.status === 'NO RECORD'\n  ? 'NO RECORD'\n  : `${d.backup.hours} h ago - ${d.backup.rows} rows${d.backup.status === 'STALE' ? ' - STALE' : ''}`;\n\nlet text =\n  `<b>DAILY WATCH - ${esc(d.date)}</b>\\n\\n` +\n  (alerts.length\n    ? `<b>ATTENTION</b>\\n${alerts.map(a => `- ${esc(a)}`).join('\\n')}\\n\\n`\n    : `Nothing that requires action.\\n\\n`) +\n  `Pending: ${d.pending.length}\\n` +\n  `Expired ambiguous: ${d.ambiguous_expired.length}\\n` +\n  `Sent but unconfirmed: ${d.unconfirmed.length}\\n` +\n  `Failed 24 h: ${d.failed_24h.length} (no code: ${d.failed_no_code.length})\\n` +\n  `Errors 24 h: ${d.errors24h} (not notified: ${d.unnotified.length})\\n` +\n  `Backup: ${esc(backupTxt)}`;\n\ntext += block('Pending', d.pending, line);\ntext += block('Expired ambiguous', d.ambiguous_expired, line);\ntext += block('Sent but unconfirmed', d.unconfirmed, line);\ntext += block('Failed in the last 24 h', d.failed_24h, line);\ntext += block('Failed WITHOUT code', d.failed_no_code, line);\ntext += block('Defective alternation', d.alternation_bad, line);\ntext += block('Verified alternation (V10)', d.alternation_ok, line);\ntext += block('Errors not notified', d.unnotified,\n  (e) => `- #${esc(e.ref)} ${esc(e.workflow)} / ${esc(e.node)} (${esc(e.occurred)})\\n  ${esc(e.message)}`);\n\n// Last safety net in case something overflowed anyway: cut before Telegram's hard\n// limit, so the alert arrives truncated instead of not arriving at all.\nif (text.length > 3900) text = text.slice(0, 3900) + '\\n\\n[report truncated]';\n\nreturn [{ json: { text } }];\n"
+      },
+      "position": [
+        280,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Telegram"
+        }
+      },
+      "id": "dw-notify",
+      "name": "Notify",
+      "notes": "INV-13: this message goes out EVERY DAY, even when everything is at zero. INV-15: explicit parse_mode HTML; escaping is done in Write Report, on every value that comes from the database.",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.text }}"
+      },
+      "position": [
+        500,
+        0
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "settings": {
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "WfErrorManager01",
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Costa_Rica"
+  },
+  "tags": []
+}

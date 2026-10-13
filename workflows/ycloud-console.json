@@ -1,0 +1,234 @@
+{
+  "active": false,
+  "connections": {
+    "IDs To Query": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Message Status",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Numbers": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Account",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Templates",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Numbers",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "IDs To Query",
+            "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Webhook Endpoints",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "description": null,
+  "id": "WfYCloudConsole1",
+  "isArchived": false,
+  "name": "Followup | YCloud Console",
+  "nodes": [
+    {
+      "id": "trg-ycl-console-0001",
+      "name": "When clicking ‘Execute workflow’",
+      "parameters": {},
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "YCloud API"
+        }
+      },
+      "id": "http-templates-0001",
+      "name": "Templates",
+      "notes": "Group 1 · tasks 1.1 to 1.4. Returns name, language, category, status, wabaId, components and messageSendTtlSeconds for each template. Pick the YCloud credential in the dropdown.",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "20"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://api.ycloud.com/v2/whatsapp/templates"
+      },
+      "position": [
+        240,
+        -112
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "YCloud API"
+        }
+      },
+      "id": "http-numbers-0001",
+      "name": "Numbers",
+      "notes": "Group 1 · task 1.5. The business number in E.164 is the 'from' field of the Build Message node. Pick the YCloud credential in the dropdown.",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "url": "https://api.ycloud.com/v2/whatsapp/phoneNumbers"
+      },
+      "position": [
+        240,
+        112
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3
+    },
+    {
+      "id": "ycl-ids",
+      "name": "IDs To Query",
+      "notes": "One-off diagnostic from 2026-09-07. Can be deleted once resolved.",
+      "parameters": {
+        "jsCode": "// Three sends from 2026-09-08, to find out what state YCloud has them in RIGHT NOW.\n// It separates two different causes of the webhook that never arrives:\n//   - if YCloud says 'delivered' and no webhook arrived -> the endpoint does not deliver\n//   - if it says 'sent' or 'accepted'                  -> there was nothing to notify yet\n// (Placeholder ids: replace them with real YCloud message ids before running.)\nreturn [\n  { json: { id: '000000000000000000000001', key: '1001_2026-08-19_20' } },\n  { json: { id: '000000000000000000000002', key: '1002_2026-08-19_20' } },\n  { json: { id: '000000000000000000000003', key: '1003_2026-08-19_20' } },\n];"
+      },
+      "position": [
+        240,
+        320
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "YCloud API"
+        }
+      },
+      "id": "ycl-status",
+      "name": "Message Status",
+      "notes": "One call per message. Returns the CURRENT status: sent, delivered, read or failed — and if it failed, errorCode and errorMessage. It was the only way to know at the time, because the delivery webhook did not exist yet.",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages/{{ $json.id }}"
+      },
+      "position": [
+        460,
+        320
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "YCloud API"
+        }
+      },
+      "id": "ycl-endpoints",
+      "name": "Webhook Endpoints",
+      "notes": "Diagnostic 2026-09-08. Tells whether the endpoint is enabled and which events it is subscribed to. CAREFUL: the response may include the secret, which would stay in this execution's data.",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "url": "https://api.ycloud.com/v2/webhookEndpoints"
+      },
+      "position": [
+        240,
+        520
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "YCloud API"
+        }
+      },
+      "id": "ycl-account",
+      "name": "Account",
+      "notes": "Pre-check for a possible account check in Gate A. Takes the wabaId from Numbers and asks for the account. Used to see whether the response carries restrictions and banState, which is open question K-R1 of the invariant-validator change. GET only.",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "url": "=https://api.ycloud.com/v2/whatsapp/businessAccounts/{{ $json.items[0].wabaId }}"
+      },
+      "position": [
+        460,
+        112
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3
+    }
+  ],
+  "settings": {
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "timezone": "America/Costa_Rica"
+  },
+  "tags": []
+}

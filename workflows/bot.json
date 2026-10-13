@@ -1,0 +1,1050 @@
+{
+  "active": false,
+  "connections": {
+    "Any Candidates?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Split Candidates",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Daily Summary",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Balance": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Pick Template",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Channel Healthy?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Firebase Token",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Channel Down Alert",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Compute Candidates": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Existing Keys",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Gate A · Number",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Daily Summary": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Watermark",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Evaluate Gate A": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Channel Healthy?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Existing Keys": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Last Templates",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Firebase Token": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Patients",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Gate A · Number": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Gate A · Templates",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Gate A · Templates": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Evaluate Gate A",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Gate B · Decide": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "OK To Send Today?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Last Templates": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Marketing Opt-outs",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Marketing Opt-outs": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Table Health",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "OK To Send Today?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Any Candidates?",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Gate B Alert",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "One By One": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Daily Summary",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Send To One Patient",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Patients": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Compute Candidates",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Pick Template": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Gate B · Decide",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run Time": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Config",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Send To One Patient": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "One By One",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Split Candidates": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "One By One",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Table Health": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Balance",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Watermark": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Notify Summary",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "description": null,
+  "id": "WfOrchestrator01",
+  "isArchived": false,
+  "name": "Followup | Bot",
+  "nodes": [
+    {
+      "id": "bot-trigger",
+      "name": "Run Time",
+      "notes": "Runs EVERY day, Sundays included (design O-F). Sunday is decided by the Code: if the workflow does not run there is no summary, and that breaks INV-13. STAYS DISABLED until the delivery webhook and the daily watch exist.",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "position": [
+        -1600,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "executeOnce": true,
+      "id": "bot-config",
+      "name": "Config",
+      "notes": "Returns ONE row with the 6 keys as columns. If it returned one row per key, the whole workflow below would run 6 times — confirmed on 2026-09-07 in the reconnaissance run.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "-- Pivots into ONE SINGLE ROW on purpose. With one row per key, every node\n-- below would run once per key: the first reconnaissance run brought the\n-- patient list 6 times. The coalesce calls give sane defaults if a key\n-- does not exist yet.\nselect\n  coalesce(max(case when name = 'sends_max_seen'     then value end), '0')::bigint      as sends_max_seen,\n  coalesce(max(case when name = 'price_marketing'    then value end), '0.0740')::numeric as price_marketing,\n  coalesce(max(case when name = 'price_utility'      then value end), '0.0113')::numeric as price_utility,\n  coalesce(max(case when name = 'anomaly_threshold'  then value end), '50')::int        as anomaly_threshold,\n  coalesce(max(case when name = 'balance_margin'     then value end), '2.0')::numeric   as balance_margin,\n  coalesce(max(case when name = 'account_restricted' then value end), 'false')          as account_restricted\nfrom bot.config;"
+      },
+      "position": [
+        -1408,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "YCloud API"
+        }
+      },
+      "id": "bot-gate-number",
+      "maxTries": 3,
+      "name": "Gate A · Number",
+      "notes": "Gate A: status CONNECTED, qualityRating != RED, and messagingLimit for gate B.",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "url": "https://api.ycloud.com/v2/whatsapp/phoneNumbers"
+      },
+      "position": [
+        -1200,
+        0
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "YCloud API"
+        }
+      },
+      "id": "bot-gate-templates",
+      "maxTries": 3,
+      "name": "Gate A · Templates",
+      "notes": "All three templates have to be APPROVED. One in PENDING cannot be used to send.",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "20"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://api.ycloud.com/v2/whatsapp/templates"
+      },
+      "position": [
+        -1008,
+        0
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "CREDENTIAL_ID_3",
+          "name": "Client App - Firebase Key"
+        }
+      },
+      "id": "bot-token",
+      "maxTries": 3,
+      "name": "Firebase Token",
+      "notes": "MISSING the credential: pick 'Client App - Firebase Key' in the Custom Auth dropdown. Returns idToken, which goes as a Bearer token in the next node.",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "jsonBody": "{\n  \"returnSecureToken\": true,\n  \"clientType\": \"CLIENT_TYPE_WEB\"\n}",
+        "method": "POST",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword"
+      },
+      "position": [
+        -384,
+        0
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "bot-patients",
+      "maxTries": 3,
+      "name": "Patients",
+      "notes": "Paginated until exhausted: asks for page = $pageCount + 1 and stops when page >= totalPages. Confirmed on 2026-09-07: the API returns total, page, limit and totalPages. About 500 patients, i.e. 3 pages of 200. maxRequests 30 is a safety cap, not the stop mechanism.",
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "=Bearer {{ $json.idToken }}"
+            },
+            {
+              "name": "accept",
+              "value": "application/json, text/plain, */*"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "completeExpression": "={{ $response.body.page >= $response.body.totalPages }}",
+              "limitPagesFetched": true,
+              "maxRequests": 30,
+              "paginationCompleteWhen": "other",
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "page",
+                    "value": "={{ $pageCount + 1 }}"
+                  }
+                ]
+              }
+            }
+          },
+          "timeout": 60000
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "200"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "sendQuery": true,
+        "url": "https://api.clinic.example/api/users/search"
+      },
+      "position": [
+        -160,
+        0
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "bot-eval-gate-a",
+      "name": "Evaluate Gate A",
+      "notes": "Gate A evaluated in a Code node and not in the IF conditions: it is 4 checks with readable reasons, and the concrete reason is what goes into the alert.",
+      "parameters": {
+        "jsCode": "// Gate A: the channel has to be healthy BEFORE fetching patients and, above all,\n// before writing the first key (INV-8). Creating keys and then finding out that\n// nothing can be sent BURNS patients: they are marked as handled without having\n// received anything. It happened on 2026-07-29/30 with dozens of keys.\nconst cfg       = $('Config').first().json;\nconst numbers   = $('Gate A · Number').first().json.items ?? [];\nconst templates = $('Gate A · Templates').first().json.items ?? [];\n\nconst REQUIRED = [\n  'followup_20_days_opt1',\n  'followup_20_days_opt2',\n  'followup_42_days_opt1',\n];\n\nconst reasons = [];\nconst number = numbers[0];\n\nif (!number) {\n  reasons.push('YCloud returned no phone number');\n} else {\n  if (number.status !== 'CONNECTED') reasons.push(`The number is ${number.status}, not CONNECTED`);\n  if (number.qualityRating === 'RED') reasons.push('The number quality rating is RED');\n}\n\nfor (const name of REQUIRED) {\n  const t = templates.find(p => p.name === name);\n  if (!t) reasons.push(`Template ${name} is missing`);\n  else if (t.status !== 'APPROVED') reasons.push(`Template ${name} is ${t.status}, not APPROVED`);\n}\n\n// A flag that NOBODY writes today (design O-R5). The read stays wired so that the\n// only missing piece is the writer, not a gap nobody remembers.\nif (String(cfg.account_restricted) === 'true') {\n  reasons.push('The account is flagged as restricted in bot.config');\n}\n\n// 'TIER_250' -> 250. It is the real ceiling of business-initiated conversations per 24 h.\nconst limit = Number(String(number?.messagingLimit ?? '').replace(/\\D/g, '')) || null;\n\nreturn [{ json: {\n  ok: reasons.length === 0,\n  reasons,\n  messagingLimit: limit,\n  businessNumber: number?.phoneNumber ?? null,\n}}];"
+      },
+      "position": [
+        -800,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "bot-if-gate-a",
+      "name": "Channel Healthy?",
+      "notes": "False branch = abort WITHOUT fetching patients and without writing anything. It is INV-8, and it is cheap because it cuts before the expensive part.",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-gate-a",
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "position": [
+        -608,
+        0
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Telegram"
+        }
+      },
+      "id": "bot-alert-gate-a",
+      "name": "Channel Down Alert",
+      "notes": "INV-15: no parse_mode. INV-13: aborting is a signal too, not a silence. | INV-15 (corrected 2026-09-08): parse_mode has NO 'None' option and omitting it does NOT disable parsing - n8n sends Markdown anyway, and a key with an odd number of underscores kills the alert with a 400. HTML is set explicitly and & < > are escaped in every interpolation.",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=RUN ABORTED - the channel is not healthy\n\n{{ String($json.reasons.join('\\n')).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }}\n\nNo patient was fetched and NO key was written. Today's candidates come in tomorrow: the 3-day window exists for exactly this."
+      },
+      "position": [
+        -608,
+        240
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "waitBetweenTries": 5000,
+      "webhookId": "00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "id": "bot-compute",
+      "name": "Compute Candidates",
+      "notes": "On Sunday it returns an empty list but the workflow carries on, so the summary goes out anyway (design O-F). If the Schedule skipped Sundays, a Sunday without a message would be indistinguishable from n8n being down.",
+      "parameters": {
+        "jsCode": "// Decides who is due today. IT WRITES NOTHING: it can be run and its result\n// inspected without a single key existing. That property is what makes this\n// layer auditable, and it is the only chance to review before INV-1 blocks a\n// patient forever.\nconst CUTOFF_DATE      = '2026-08-01';   // spec 4.1\nconst SATELLITE_BRANCH = 'SATELLITE';    // spec 4.3: fully excluded\nconst MAIN_BRANCH      = 'MAIN';         // spec 4.1 and D15: the only one that receives. Exact match, on purpose\nconst MILESTONES = [\n  { name: '20', from: 20, to: 22 },\n  { name: '42', from: 42, to: 44 },\n];\n\nconst pages    = $input.all();\nconst patients = pages.flatMap(p => p.json.data ?? []);\nconst declaredTotal = Number(pages[0]?.json?.total ?? 0);\n\n// INV-10 applied to the patient read: an empty list is NOT \"nobody today\",\n// it is a read that failed without raising an error.\nif (patients.length === 0) {\n  throw new Error('The API returned 0 patients. Aborted: an empty read is not \"no candidates\".');\n}\n// And a truncated read is indistinguishable from a slow day. The old graph asked\n// for a single page of 500 and lost patient 501 onwards, without anything failing.\nif (declaredTotal && patients.length !== declaredTotal) {\n  throw new Error(`Truncated read: the API declares ${declaredTotal} patients and ${patients.length} arrived. Aborted.`);\n}\n\nconst today  = DateTime.now().setZone('America/Costa_Rica').startOf('day');\nconst cutoff = DateTime.fromISO(CUTOFF_DATE, { zone: 'America/Costa_Rica' }).startOf('day');\nconst isSunday = today.weekday === 7;\n\nconst emitted    = new Set();   // INV-6: dedup within the run\nconst candidates = [];\nconst discards   = { no_date: 0, invalid_date: 0, no_phone: 0, odd_phone: 0, satellite: 0,\n                     no_branch: 0, other_branch: 0 };\nconst details    = [];\nlet active       = 0;\nlet withMain     = 0;\n\nfor (const p of patients) {\n  if (p.role !== 'member' || p.status !== 'active') continue;  // not eligible, not a discard\n  active++;\n\n  // Branch BEFORE the date (design S-B). The order matters: SATELLITE excludes even if\n  // the patient also has MAIN.\n  const branches = (Array.isArray(p.branches) ? p.branches : [p.branches])\n    .map(s => String(s ?? '').trim())\n    .filter(Boolean);\n  if (branches.length === 0) { discards.no_branch++; continue; }   // missing data (INV-12)\n\n  const hasMain = branches.includes(MAIN_BRANCH);\n  if (hasMain) withMain++;   // for the guard below: counted before removing SATELLITE\n\n  const isSatellite = Array.isArray(p.branches)\n    ? p.branches.includes(SATELLITE_BRANCH)\n    : String(p.branches ?? '').includes(SATELLITE_BRANCH);\n  if (isSatellite) { discards.satellite++; continue; }\n\n  if (!hasMain) { discards.other_branch++; continue; }     // a decision, not data to fix\n\n  if (!p.lastActivePlanStartDate) { discards.no_date++; continue; }\n\n  const m = String(p.lastActivePlanStartDate).match(/^(\\d{4})-(\\d{2})-(\\d{2})/);\n  if (!m) {                                     // INV-7: a date is never guessed\n    discards.invalid_date++;\n    details.push(`${p.id} ${p.name}: odd date \"${p.lastActivePlanStartDate}\"`);\n    continue;\n  }\n  const planDate = m[0];\n\n  const start = DateTime.fromISO(planDate, { zone: 'America/Costa_Rica' }).startOf('day');\n  if (start < cutoff) continue;\n\n  const days = Math.round(today.diff(start, 'days').days);\n  if (!MILESTONES.some(h => days >= h.from && days <= h.to)) continue;   // not due today\n\n  // The phone is validated AFTER knowing the patient is due today: that way the\n  // discard count (INV-12) measures what was really lost, not background noise.\n  if (!p.phone) {\n    discards.no_phone++;\n    details.push(`${p.id} ${p.name}: NO PHONE and was due today`);\n    continue;\n  }\n  // The data carries invisible text-direction marks (U+202A/U+202C) wrapping the\n  // number. The non-digit replace removes them.\n  const d = String(p.phone).replace(/\\D/g, '');\n  let phone = null;\n  if (d.length === 8) phone = `+506${d}`;                       // local number without country code\n  else if (d.length === 11 && d.startsWith('506')) phone = `+${d}`;\n  else if (d.length >= 10 && d.length <= 15) phone = `+${d}`;   // another country, already with its code\n  if (!phone) {\n    discards.odd_phone++;\n    details.push(`${p.id} ${p.name}: phone \"${p.phone}\" does not fit E.164`);\n    continue;\n  }\n\n  const fullName = String(p.name ?? '').trim().replace(/\\s+/g, ' ');\n  const parts = fullName.split(' ');\n\n  for (const milestone of MILESTONES) {\n    if (days < milestone.from || days > milestone.to) continue;\n    const key = `${p.id}_${planDate}_${milestone.name}`;\n    if (emitted.has(key)) continue;          // INV-6\n    emitted.add(key);\n    candidates.push({\n      unique_key:  key,\n      patient_id:  String(p.id),\n      last_name:   parts.slice(1).join(' '),\n      first_name:  parts[0] ?? '',\n      full_name:   fullName,\n      phone,\n      milestone:   milestone.name,\n      plan_date:   planDate,\n      days,\n    });\n  }\n}\n\n// INV-10 by another road (D15): if nobody has the MAIN branch, the most likely cause\n// is that the value changed in the app, not that there are no patients today. Without\n// this, the bot would send zero messages every day without a single error.\nif (active > 0 && withMain === 0) {\n  throw new Error(`No active patient has the branch \"${MAIN_BRANCH}\" ` +\n    `(${active} active: ${discards.no_branch} without branch, ${discards.satellite} SATELLITE, ` +\n    `${discards.other_branch} from another branch). Aborted: a filter that leaves everyone out is not \"nobody today\".`);\n}\n\n// A single \"envelope\" with everything inside. That way no node below runs N times,\n// and the summary exists even when there is not a single candidate today (INV-13).\nreturn [{ json: {\n  isSunday,\n  totalPatients: patients.length,\n  discards,\n  discardDetails: details.slice(0, 25),\n  candidates: isSunday ? [] : candidates,\n}}];"
+      },
+      "position": [
+        64,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "bot-keys",
+      "name": "Existing Keys",
+      "notes": "First anti-duplicate layer (design O-A). It is not redundant with the sender's ON CONFLICT: if this filter fails, the candidate count is inflated and the gates decide on false numbers.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ [ $json.candidates.map(c => c.unique_key) ] }}"
+        },
+        "query": "select unique_key from bot.sends where unique_key = any($1);"
+      },
+      "position": [
+        288,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "bot-last-templates",
+      "name": "Last Templates",
+      "notes": "Alternation by the template ACTUALLY used, not by counting rows (spec 4.6). The old SATELLITE design counted records and the cleanup reset the count: a patient who renewed got the same message twice.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ [ $('Compute Candidates').first().json.candidates.filter(c => c.milestone === '20').map(c => c.patient_id) ] }}"
+        },
+        "query": "select distinct on (patient_id) patient_id, template\nfrom bot.sends\nwhere milestone = '20' and patient_id = any($1)\norder by patient_id, created_at desc;"
+      },
+      "position": [
+        512,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "YCloud API"
+        }
+      },
+      "id": "bot-optouts",
+      "maxTries": 3,
+      "name": "Marketing Opt-outs",
+      "notes": "A single call for everyone, not one per patient. Spec 4.6 point 2: the opt-out is checked BEFORE picking the template, not after the send fails.",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://api.ycloud.com/v2/unsubscribers"
+      },
+      "position": [
+        720,
+        0
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "bot-health",
+      "name": "Table Health",
+      "notes": "Compared against sends_max_seen (design D-E). Detects a shrunken table, which also covers restoring an old backup: the INV-17 scenario.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "select count(*)::bigint as total from bot.sends;"
+      },
+      "position": [
+        944,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "YCloud API"
+        }
+      },
+      "id": "bot-balance",
+      "maxTries": 3,
+      "name": "Balance",
+      "notes": "YCloud charges against prepaid credit. Zero balance = every send fails = burned keys. That is why it is checked BEFOREHAND (spec 7.1).",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        },
+        "url": "https://api.ycloud.com/v2/balance"
+      },
+      "position": [
+        1168,
+        0
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "bot-pick",
+      "name": "Pick Template",
+      "parameters": {
+        "jsCode": "const base = $('Compute Candidates').first().json;\n\nconst alreadyContacted = new Set(\n  $('Existing Keys').all().map(i => i.json.unique_key).filter(Boolean)\n);\n// REMOVED ON 2026-09-07: there was a guard here that aborted if bot.sends had\n// rows and this filter returned zero. It is a FALSE POSITIVE and it fired on the\n// first real run.\n//\n// The filter queries ONLY the keys of today's candidates, so zero is the normal,\n// correct result as long as those patients have not been contacted before. The\n// guard came from the old Airtable design, where the WHOLE history was read:\n// there, a zero with a full table really was suspicious.\n//\n// The guard that DOES belong already exists, in Gate B: the watermark\n// (count(*) < sends_max_seen). It covers the same thing —wrong database, shrunken\n// table— plus restoring an old backup (INV-17), and without the false\n// positive. It is exactly what design D-E chose so as not to depend on\n// \"the table is empty\". See design O-A.\n\nconst last = new Map(\n  $('Last Templates').all()\n    .filter(i => i.json.patient_id)\n    .map(i => [String(i.json.patient_id), i.json.template])\n);\n\nconst optedOut = new Set(\n  $('Marketing Opt-outs').all()\n    .flatMap(i => i.json.items ?? [])\n    .map(u => String(u.customer ?? '').replace(/\\D/g, ''))\n    .filter(Boolean)\n);\n\nconst chosen = [];\nlet alreadyContactedCount = 0;\nlet optOutsApplied = 0;\n\nfor (const c of base.candidates) {\n  if (alreadyContacted.has(c.unique_key)) { alreadyContactedCount++; continue; }\n\n  let template, params, category;\n\n  if (c.milestone === '42') {\n    template = 'followup_42_days_opt1';\n    category = 'utility';\n    // {{2}} is the appointment date IN SPANISH AND HUMAN-READABLE: \"4 de Setiembre\".\n    // Sending the ISO date raises no error: it sends an ugly message to a real patient.\n    const f = DateTime.fromISO(c.plan_date, { zone: 'America/Costa_Rica' }).setLocale('es');\n    const month = f.toFormat('MMMM');\n    params = [c.first_name, `${f.day} de ${month.charAt(0).toUpperCase()}${month.slice(1)}`];\n  } else {\n    // Alternation (spec 4.6): if the last one was opt1, opt2 is due; if it was opt2 or\n    // there is none, opt1.\n    const previous = last.get(c.patient_id);\n    template = previous === 'followup_20_days_opt1'\n      ? 'followup_20_days_opt2'\n      : 'followup_20_days_opt1';\n\n    // opt2 is Marketing. If the patient opted out, they get opt1 (Utility).\n    if (template === 'followup_20_days_opt2' && optedOut.has(c.phone.replace(/\\D/g, ''))) {\n      template = 'followup_20_days_opt1';\n      optOutsApplied++;\n    }\n    category = template.endsWith('opt2') ? 'marketing' : 'utility';\n    params = [c.first_name];\n  }\n\n  chosen.push({ ...c, template, category, params });\n}\n\nreturn [{ json: { ...base, candidates: chosen, alreadyContacted: alreadyContactedCount, optOutsApplied } }];"
+      },
+      "position": [
+        1392,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "bot-gate-b",
+      "name": "Gate B · Decide",
+      "parameters": {
+        "jsCode": "// Gate B: the four checks that need to know HOW MANY candidates there are.\n// Counting writes nothing, so evaluating them here still honours INV-8:\n// \"before writing the first key\".\nconst base  = $('Pick Template').first().json;\nconst cfg   = $('Config').first().json;\nconst gateA = $('Evaluate Gate A').first().json;\n\nconst n = base.candidates.length;\nconst reasons = [];\n\n// 1. Anomaly brake (spec 4.4). Abort and shout, never truncate and stay quiet:\n//    truncating hides the date bug that made everybody eligible.\nconst threshold = Number(cfg.anomaly_threshold ?? 50);\nif (n > threshold) reasons.push(`${n} candidates exceeds the anomaly threshold (${threshold})`);\n\n// 2. The channel's real ceiling, read from the API (TIER_250).\nif (gateA.messagingLimit && n > gateA.messagingLimit) {\n  reasons.push(`${n} candidates exceeds the channel limit (${gateA.messagingLimit})`);\n}\n\n// 3. Balance. The cost is PER TEMPLATE: milestone 20 alternates between Utility and\n//    Marketing, and the difference is almost 7x.\nconst pM = Number(cfg.price_marketing ?? 0.074);\nconst pU = Number(cfg.price_utility   ?? 0.0113);\nconst nM = base.candidates.filter(c => c.category === 'marketing').length;\nconst nU = n - nM;\nconst cost   = nM * pM + nU * pU;\nconst margin = Number(cfg.balance_margin ?? 2);\n\nconst balanceRaw = $('Balance').first().json ?? {};\nconst balance = Number(balanceRaw.balance ?? balanceRaw.amount ?? balanceRaw.available ?? NaN);\nif (n > 0) {\n  if (!Number.isFinite(balance)) {\n    reasons.push(`Could not read the YCloud balance. Response: ${JSON.stringify(balanceRaw).slice(0, 200)}`);\n  } else if (balance < cost * margin) {\n    reasons.push(`Balance ${balance.toFixed(4)} is below the estimated cost ${cost.toFixed(4)} x margin ${margin}`);\n  }\n}\n\n// 4. The table shrank (design D-E). This also covers restoring an old\n//    backup, which is the INV-17 scenario.\nconst rows = Number($('Table Health').first().json.total ?? 0);\nconst mark = Number(cfg.sends_max_seen ?? 0);\nif (rows < mark) {\n  reasons.push(`bot.sends has ${rows} rows and the watermark is ${mark}: the table shrank`);\n}\n\nreturn [{ json: {\n  ...base,\n  gateOk: reasons.length === 0,\n  reasons,\n  estimatedCost: cost,\n  balance: Number.isFinite(balance) ? balance : null,\n  nMarketing: nM,\n  nUtility: nU,\n}}];"
+      },
+      "position": [
+        1600,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "bot-if-gate-b",
+      "name": "OK To Send Today?",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-gate-b",
+              "leftValue": "={{ $json.gateOk }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "position": [
+        1824,
+        0
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Telegram"
+        }
+      },
+      "id": "bot-alert-gate-b",
+      "name": "Gate B Alert",
+      "notes": "INV-15 (corrected 2026-09-08): parse_mode has NO 'None' option and omitting it does NOT disable parsing - n8n sends Markdown anyway, and a key with an odd number of underscores kills the alert with a 400. HTML is set explicitly and & < > are escaped in every interpolation.",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=RUN ABORTED - sending is not possible today\n\n{{ String($json.reasons.join('\\n')).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }}\n\nCandidates left unattended: {{ String($json.candidates.length).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }}\nEstimated cost that was stopped: {{ String(Number($json.estimatedCost).toFixed(4)).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }} USD\n\nNO key was written. They come in tomorrow: the 3-day window exists for exactly this."
+      },
+      "position": [
+        1824,
+        240
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "waitBetweenTries": 5000,
+      "webhookId": "00000000-0000-4000-8000-000000000002"
+    },
+    {
+      "id": "bot-if-any",
+      "name": "Any Candidates?",
+      "notes": "Zero candidates is NOT a failure: it is the normal case most days. But the summary goes out anyway (INV-13), which is why the false branch goes to the summary and not into the void.",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-any",
+              "leftValue": "={{ $json.candidates.length }}",
+              "operator": {
+                "operation": "gt",
+                "type": "number"
+              },
+              "rightValue": 0
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "position": [
+        2048,
+        0
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "id": "bot-split",
+      "name": "Split Candidates",
+      "parameters": {
+        "jsCode": "// Only here is the envelope opened into one item per patient. Everything before\n// ran a single time, so no node made N identical queries.\nreturn $input.first().json.candidates.map(c => ({ json: c }));"
+      },
+      "position": [
+        2272,
+        -144
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "bot-loop",
+      "name": "One By One",
+      "notes": "Batch size 1: one sub-workflow execution per patient. Replaces the mode:each of the Execute Sub-workflow node, which is deprecated. CAREFUL: output 0 = 'done', output 1 = 'loop'.",
+      "parameters": {
+        "options": {}
+      },
+      "position": [
+        2480,
+        -144
+      ],
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3
+    },
+    {
+      "id": "bot-send",
+      "name": "Send To One Patient",
+      "notes": "The only workflow that sends. The 7 fields are the frozen contract of the send sub-workflow.",
+      "parameters": {
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Followup | Send To Patient",
+          "mode": "list",
+          "value": "WfSendToPatient1"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "unique_key",
+              "id": "unique_key",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "patient_id",
+              "id": "patient_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "last_name",
+              "id": "last_name",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "phone",
+              "id": "phone",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "milestone",
+              "id": "milestone",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "template",
+              "id": "template",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "params",
+              "id": "params",
+              "required": false,
+              "type": "array"
+            }
+          ],
+          "value": {
+            "last_name": "={{ $json.last_name }}",
+            "milestone": "={{ $json.milestone }}",
+            "params": "={{ $json.params }}",
+            "patient_id": "={{ $json.patient_id }}",
+            "phone": "={{ $json.phone }}",
+            "template": "={{ $json.template }}",
+            "unique_key": "={{ $json.unique_key }}"
+          }
+        }
+      },
+      "position": [
+        2672,
+        144
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2
+    },
+    {
+      "id": "bot-summary",
+      "name": "Daily Summary",
+      "parameters": {
+        "jsCode": "// The summary ALWAYS goes out: with sends, with zero candidates, or on a Sunday.\n// That is INV-13, and it is the half that was missing in July: six days of\n// \"successful\" executions without a single signal that dozens of patients were receiving nothing.\nconst g = $('Gate B · Decide').first().json;\n\n// Per-patient results only exist if there were sends. On the zero-candidates\n// branch the input is the envelope itself, which carries no 'status'.\nconst results = $input.all().map(i => i.json).filter(r => r && r.status !== undefined);\nconst count = (s) => results.filter(r => r.status === s).length;\n\nconst d = g.discards ?? {};\n// Out by branch is a decision, not data to fix (spec 4.1, D15). If it were added\n// to the discards, the total would be a big, fixed number that nobody reads.\nconst BY_BRANCH = ['satellite', 'other_branch'];\nconst totalDiscards = Object.entries(d)\n  .filter(([k]) => !BY_BRANCH.includes(k))\n  .reduce((a, [, v]) => a + v, 0);\nconst outByBranch = BY_BRANCH.reduce((a, k) => a + (d[k] ?? 0), 0);\nconst when = DateTime.now().setZone('America/Costa_Rica').toFormat('dd/MM/yyyy HH:mm');\n\nlet text = `FOLLOWUP SUMMARY - ${when}\\n\\n`;\n\nif (g.isSunday) {\n  text += 'Sunday: nothing is sent (spec 4.4). The bot ran anyway to leave a signal.\\n\\n';\n}\n\ntext += `Patients read: ${g.totalPatients}\\n`;\ntext += `Today's candidates: ${g.candidates.length}\\n`;\nif (g.alreadyContacted) text += `Already contacted before, skipped: ${g.alreadyContacted}\\n`;\nif (g.optOutsApplied)   text += `Marketing opt-outs applied (opt2 -> opt1): ${g.optOutsApplied}\\n`;\n\nif (results.length) {\n  text += `\\nSent: ${count('sent')}\\n`;\n  text += `Failed: ${count('failed')}\\n`;\n  text += `Ambiguous: ${count('ambiguous')}\\n`;\n  const preex = count('preexisting');\n  if (preex) text += `Key already existed, nothing sent: ${preex}\\n`;\n} else if (!g.isSunday) {\n  text += '\\nNothing was sent today.\\n';\n}\n\nif (outByBranch) {\n  text += `\\nOut by branch (a decision, no action needed): ${outByBranch}\\n`;\n  if (d.satellite)      text += `  SATELLITE: ${d.satellite}\\n`;\n  if (d.other_branch)   text += `  without the MAIN branch: ${d.other_branch}\\n`;\n}\n\n// INV-12: discards are visible. That is what lets the staff fix dates and\n// phones in the app, instead of them getting lost in silence.\nif (totalDiscards) {\n  text += `\\nDiscarded: ${totalDiscards}\\n`;\n  if (d.no_branch)      text += `  no branch: ${d.no_branch}\\n`;\n  if (d.no_date)        text += `  no plan date: ${d.no_date}\\n`;\n  if (d.invalid_date)   text += `  unreadable date: ${d.invalid_date}\\n`;\n  if (d.no_phone)       text += `  NO PHONE and due today: ${d.no_phone}\\n`;\n  if (d.odd_phone)      text += `  phone that does not fit E.164: ${d.odd_phone}\\n`;\n}\nif (g.discardDetails?.length) {\n  text += `\\nTo fix in the app:\\n${g.discardDetails.join('\\n')}\\n`;\n}\n\ntext += `\\nEstimated cost: ${Number(g.estimatedCost ?? 0).toFixed(4)} USD`;\n\n// Telegram cuts at 4096 characters.\nif (text.length > 3800) text = text.slice(0, 3800) + '\\n... (truncated)';\n\nreturn [{ json: { text, sent: count('sent'), failed: count('failed'), ambiguous: count('ambiguous') } }];"
+      },
+      "position": [
+        2912,
+        16
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "bot-watermark",
+      "name": "Watermark",
+      "notes": "AFTER the sends and with greatest(). Before them it would leave the mark at the count prior to today's keys, and tomorrow the guard would compare against a number lower than the real one. greatest() makes it idempotent and safe against an aborted run.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "update bot.config\n   set value = greatest(value::bigint, (select count(*) from bot.sends))::text\n where name = 'sends_max_seen';"
+      },
+      "position": [
+        3152,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Telegram"
+        }
+      },
+      "id": "bot-notify",
+      "name": "Notify Summary",
+      "notes": "INV-15: no parse_mode. INV-13: this message goes out every day, even when the result is zero. | INV-15 (corrected 2026-09-08): parse_mode has NO 'None' option and omitting it does NOT disable parsing - n8n sends Markdown anyway, and a key with an odd number of underscores kills the alert with a 400. HTML is set explicitly and & < > are escaped in every interpolation.",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ String($('Daily Summary').first().json.text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }}"
+      },
+      "position": [
+        3360,
+        0
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "waitBetweenTries": 5000,
+      "webhookId": "00000000-0000-4000-8000-000000000003"
+    }
+  ],
+  "settings": {
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "WfErrorManager01",
+    "executionOrder": "v1",
+    "executionTimeout": 600,
+    "saveManualExecutions": true,
+    "timezone": "America/Costa_Rica"
+  },
+  "tags": []
+}

@@ -1,0 +1,394 @@
+[
+  {
+    "id": "WfSendToPatient1",
+    "name": "Followup | Send To Patient",
+    "isArchived": false,
+    "nodes": [
+      {
+        "id": "fake-send-trigger",
+        "name": "Input",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-send-claim",
+        "name": "Claim Key",
+        "type": "n8n-nodes-base.postgres",
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "insert into bot.sends (unique_key, phone) values ($1, $2) on conflict (unique_key) do nothing returning unique_key",
+          "options": {
+            "queryReplacement": "={{ [ $json.unique_key, $json.phone ] }}"
+          }
+        },
+        "disabled": false
+      },
+      {
+        "id": "fake-send-if",
+        "name": "Claimed?",
+        "type": "n8n-nodes-base.if",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-send-http",
+        "name": "Send",
+        "type": "n8n-nodes-base.httpRequest",
+        "parameters": { "method": "POST", "url": "https://example.invalid/send" },
+        "retryOnFail": false,
+        "onError": "continueErrorOutput",
+        "disabled": false
+      },
+      {
+        "id": "fake-send-error",
+        "name": "Classify Failure",
+        "type": "n8n-nodes-base.code",
+        "parameters": { "jsCode": "return $input.all();" },
+        "disabled": false
+      },
+      {
+        "id": "fake-send-alert",
+        "name": "Notify",
+        "type": "n8n-nodes-base.telegram",
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "000000000",
+          "text": "Fabricated case",
+          "additionalFields": { "parse_mode": "HTML" }
+        },
+        "disabled": false
+      },
+      {
+        "id": "fake-send-end",
+        "name": "Output",
+        "type": "n8n-nodes-base.set",
+        "parameters": {},
+        "disabled": false
+      }
+    ],
+    "connections": {
+      "Input": { "main": [[{ "node": "Claim Key", "type": "main", "index": 0 }]] },
+      "Claim Key": { "main": [[{ "node": "Claimed?", "type": "main", "index": 0 }]] },
+      "Claimed?": {
+        "main": [
+          [{ "node": "Send", "type": "main", "index": 0 }],
+          [{ "node": "Notify", "type": "main", "index": 0 }]
+        ]
+      },
+      "Send": {
+        "main": [
+          [{ "node": "Output", "type": "main", "index": 0 }],
+          [{ "node": "Classify Failure", "type": "main", "index": 0 }]
+        ]
+      },
+      "Classify Failure": { "main": [[{ "node": "Output", "type": "main", "index": 0 }]] },
+      "Notify": { "main": [[{ "node": "Output", "type": "main", "index": 0 }]] }
+    },
+    "settings": {}
+  },
+  {
+    "id": "WfTestSend000001",
+    "name": "Followup | Test Send · OPEN 24H WINDOW FIRST",
+    "isArchived": false,
+    "nodes": [
+      {
+        "id": "fake-test-trigger",
+        "name": "Run Manually",
+        "type": "n8n-nodes-base.manualTrigger",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-test-call",
+        "name": "Send To One Patient",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "WfSendToPatient1",
+            "mode": "list"
+          }
+        },
+        "disabled": false
+      }
+    ],
+    "connections": {
+      "Run Manually": { "main": [[{ "node": "Send To One Patient", "type": "main", "index": 0 }]] }
+    },
+    "settings": {}
+  },
+  {
+    "id": "WfOrchestrator01",
+    "name": "Followup | Bot",
+    "isArchived": false,
+    "nodes": [
+      {
+        "id": "fake-bot-trigger",
+        "name": "Run Time",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-bot-gate-a",
+        "name": "Channel Healthy?",
+        "type": "n8n-nodes-base.if",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-bot-alert-a",
+        "name": "Channel Down Alert",
+        "type": "n8n-nodes-base.telegram",
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "000000000",
+          "text": "Fabricated case",
+          "additionalFields": { "parse_mode": "HTML" }
+        },
+        "disabled": false
+      },
+      {
+        "id": "fake-bot-gate-b",
+        "name": "OK To Send Today?",
+        "type": "n8n-nodes-base.if",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-bot-alert-b",
+        "name": "Gate B Alert",
+        "type": "n8n-nodes-base.telegram",
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "000000000",
+          "text": "Fabricated case",
+          "additionalFields": { "parse_mode": "HTML" }
+        },
+        "disabled": false
+      },
+      {
+        "id": "fake-bot-call",
+        "name": "Send To One Patient",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "value": "WfSendToPatient1",
+            "mode": "list"
+          }
+        },
+        "disabled": false
+      }
+    ],
+    "connections": {
+      "Run Time": { "main": [[{ "node": "Channel Healthy?", "type": "main", "index": 0 }]] },
+      "Channel Healthy?": {
+        "main": [
+          [{ "node": "OK To Send Today?", "type": "main", "index": 0 }],
+          [{ "node": "Channel Down Alert", "type": "main", "index": 0 }]
+        ]
+      },
+      "OK To Send Today?": {
+        "main": [
+          [{ "node": "Send To One Patient", "type": "main", "index": 0 }],
+          [{ "node": "Gate B Alert", "type": "main", "index": 0 }]
+        ]
+      }
+    },
+    "settings": {
+      "timezone": "America/Costa_Rica",
+      "errorWorkflow": "WfErrorManager01"
+    }
+  },
+  {
+    "id": "WfDeliveryHook01",
+    "name": "Followup | Delivery Webhook",
+    "isArchived": false,
+    "nodes": [
+      {
+        "id": "fake-webhook-trigger",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "parameters": { "httpMethod": "POST", "path": "made-up-path" },
+        "disabled": false
+      }
+    ],
+    "connections": {},
+    "settings": { "errorWorkflow": "WfErrorManager01" }
+  },
+  {
+    "id": "WfErrorManager01",
+    "name": "Followup | Error Manager",
+    "isArchived": false,
+    "nodes": [
+      {
+        "id": "fake-error-trigger",
+        "name": "Error Received",
+        "type": "n8n-nodes-base.errorTrigger",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-error-alert",
+        "name": "Notify",
+        "type": "n8n-nodes-base.telegram",
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "000000000",
+          "text": "Fabricated case",
+          "additionalFields": { "parse_mode": "HTML" }
+        },
+        "disabled": false
+      }
+    ],
+    "connections": {
+      "Error Received": { "main": [[{ "node": "Notify", "type": "main", "index": 0 }]] }
+    },
+    "settings": {}
+  },
+  {
+    "id": "WfSqlConsole0001",
+    "name": "Followup | SQL Console",
+    "isArchived": false,
+    "nodes": [
+      {
+        "id": "fake-sql-trigger",
+        "name": "Manual",
+        "type": "n8n-nodes-base.manualTrigger",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-sql-query",
+        "name": "Query",
+        "type": "n8n-nodes-base.postgres",
+        "parameters": { "operation": "executeQuery", "query": "select 1", "options": {} },
+        "disabled": false
+      }
+    ],
+    "connections": {
+      "Manual": { "main": [[{ "node": "Query", "type": "main", "index": 0 }]] }
+    },
+    "settings": {}
+  },
+  {
+    "id": "WfYCloudConsole1",
+    "name": "Followup | YCloud Console",
+    "isArchived": false,
+    "nodes": [
+      {
+        "id": "fake-ycloud-trigger",
+        "name": "Manual",
+        "type": "n8n-nodes-base.manualTrigger",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-ycloud-get",
+        "name": "Read YCloud",
+        "type": "n8n-nodes-base.httpRequest",
+        "parameters": { "method": "GET", "url": "https://example.invalid/read" },
+        "disabled": false
+      }
+    ],
+    "connections": {
+      "Manual": { "main": [[{ "node": "Read YCloud", "type": "main", "index": 0 }]] }
+    },
+    "settings": {}
+  },
+  {
+    "id": "WfBackup00000001",
+    "name": "Followup | Backup",
+    "isArchived": false,
+    "nodes": [
+      {
+        "id": "fake-backup-trigger",
+        "name": "Daily 10:00",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-backup-s3",
+        "name": "Upload To Bucket",
+        "type": "n8n-nodes-base.s3",
+        "parameters": { "operation": "upload" },
+        "disabled": false
+      }
+    ],
+    "connections": {
+      "Daily 10:00": { "main": [[{ "node": "Upload To Bucket", "type": "main", "index": 0 }]] }
+    },
+    "settings": {
+      "timezone": "America/Costa_Rica",
+      "errorWorkflow": "WfErrorManager01",
+      "saveDataSuccessExecution": "none",
+      "saveManualExecutions": false
+    }
+  },
+  {
+    "id": "WfDailyWatch0001",
+    "name": "Followup | Daily Watch",
+    "isArchived": false,
+    "nodes": [
+      {
+        "id": "fake-watch-trigger",
+        "name": "Daily 11:30",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-watch-alert",
+        "name": "Notify",
+        "type": "n8n-nodes-base.telegram",
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "000000000",
+          "text": "Fabricated case",
+          "additionalFields": { "parse_mode": "HTML" }
+        },
+        "disabled": false
+      }
+    ],
+    "connections": {
+      "Daily 11:30": { "main": [[{ "node": "Notify", "type": "main", "index": 0 }]] }
+    },
+    "settings": {
+      "timezone": "America/Costa_Rica",
+      "errorWorkflow": "WfErrorManager01",
+      "saveDataSuccessExecution": "none",
+      "saveManualExecutions": false
+    }
+  },
+  {
+    "id": "WfBackupConsole1",
+    "name": "Followup | Backup Console",
+    "isArchived": false,
+    "nodes": [
+      {
+        "id": "fake-backup-console-trigger",
+        "name": "Manual",
+        "type": "n8n-nodes-base.manualTrigger",
+        "parameters": {},
+        "disabled": false
+      },
+      {
+        "id": "fake-backup-console-s3",
+        "name": "Download From B2",
+        "type": "n8n-nodes-base.s3",
+        "parameters": { "operation": "download" },
+        "disabled": false
+      }
+    ],
+    "connections": {
+      "Manual": { "main": [[{ "node": "Download From B2", "type": "main", "index": 0 }]] }
+    },
+    "settings": {
+      "saveDataSuccessExecution": "none",
+      "saveManualExecutions": false
+    }
+  }
+]

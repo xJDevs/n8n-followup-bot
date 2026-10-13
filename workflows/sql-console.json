@@ -1,0 +1,63 @@
+{
+  "active": false,
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Execute a SQL query",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "description": null,
+  "id": "WfSqlConsole0001",
+  "isArchived": false,
+  "name": "Followup | SQL Console",
+  "nodes": [
+    {
+      "id": "5562aaa4-8245-4d8c-a894-065e7a73acc9",
+      "name": "When clicking ‘Execute workflow’",
+      "parameters": {},
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "38b8a991-4781-46e4-8e87-fe9d5f198b76",
+      "name": "Execute a SQL query",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "select name, value from bot.config where name = 'anomaly_threshold';\n"
+      },
+      "position": [
+        208,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    }
+  ],
+  "settings": {
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false
+  },
+  "tags": []
+}

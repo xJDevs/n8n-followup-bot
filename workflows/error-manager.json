@@ -1,0 +1,165 @@
+{
+  "active": false,
+  "connections": {
+    "Error Received": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Format",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Format": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Save Error",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Notify": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Mark Notified",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Save Error": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Notify",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "description": null,
+  "id": "WfErrorManager01",
+  "isArchived": false,
+  "name": "Followup | Error Manager",
+  "nodes": [
+    {
+      "id": "2164fbea-7ceb-409e-a60a-c0fcddf0a35e",
+      "name": "Error Received",
+      "parameters": {},
+      "position": [
+        -480,
+        -96
+      ],
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1
+    },
+    {
+      "id": "9aacc02c-8ce1-45e3-9e09-b9261595b4d4",
+      "name": "Format",
+      "parameters": {
+        "jsCode": "// Reads the Error Trigger payload defensively (M-C): its shape changes between\n// versions, and this workflow runs exactly when something has already gone wrong. If it\n// blows up reading a property of undefined, the original failure is lost entirely.\nconst e = $input.first().json ?? {};\n\nconst workflow    = e.workflow?.name ?? 'unknown';\nconst executionId = String(e.execution?.id ?? '');\nconst node        = e.execution?.error?.node?.name\n                 ?? e.execution?.error?.node\n                 ?? e.execution?.lastNodeExecuted\n                 ?? 'unknown';\nconst message     = e.execution?.error?.message ?? 'no detail';\nconst url         = e.execution?.url ?? '';\n\nconst when = DateTime.now()\n  .setZone('America/Costa_Rica')\n  .toFormat('dd/MM/yyyy HH:mm');\n\nconst text =\n  `FAILURE IN ${workflow}\\n\\n` +\n  `When: ${when}\\n` +\n  `Node: ${node}\\n` +\n  `Error: ${message}\\n` +\n  (executionId ? `Execution: ${executionId}\\n` : '') +\n  (url ? `\\n${url}` : '');\n\nreturn [{ json: { workflow, executionId, node, message, text } }];\n"
+      },
+      "position": [
+        -304,
+        -96
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "76d77e9c-d3d2-491c-9b1b-3ff17ca0e0fa",
+      "name": "Save Error",
+      "notes": "queryReplacement as an ARRAY (fix 2026-09-05). With a comma-separated list, a comma inside 'message' split the value and shifted the positions, and an empty 'executionId' was dropped: the INSERT failed with 'there is no parameter $4' and the durable trace was lost, which is exactly what M-A exists to guarantee. onError continueRegularOutput is deliberate: if saving fails, the alert still has to go out.",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ [ $json.workflow, $json.executionId, $json.node, $json.message ] }}"
+        },
+        "query": "insert into bot.errors (workflow, execution_id, node, message)\nvalues ($1, $2, $3, $4)\nreturning id;"
+      },
+      "position": [
+        -128,
+        -96
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Telegram"
+        }
+      },
+      "id": "e351ff07-bab4-4486-9e6d-7437a899e4c7",
+      "name": "Notify",
+      "notes": "INV-15 (corrected 2026-09-08): parse_mode has NO 'None' option and omitting it does NOT disable parsing - n8n sends Markdown anyway, and a key with an odd number of underscores kills the alert with a 400. HTML is set explicitly and & < > are escaped in every interpolation.",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ String($('Format').item.json.text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') + '\\n\\n' + (() => { try { const id = String($('Save Error').first().json.id ?? ''); return /^\\d+$/.test(id) ? 'Record: bot.errors #' + id : '⚠️ NO TRACE: this failure was not stored in bot.errors and will not show up in the daily watch.'; } catch (e) { return '⚠️ NO TRACE: this failure was not stored in bot.errors and will not show up in the daily watch.'; } })() }}"
+      },
+      "position": [
+        80,
+        -96
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "waitBetweenTries": 5000,
+      "webhookId": "00000000-0000-4000-8000-000000000004"
+    },
+    {
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "b428d8a9-ad88-4e13-9f87-aab2a84315ef",
+      "name": "Mark Notified",
+      "notes": "queryReplacement as an ARRAY (fix 2026-09-05). If 'Save Error' failed, the id comes back empty; with a comma-separated list that left zero parameters and the UPDATE blew up with 'there is no parameter $1'.",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ [ $('Save Error').item.json.id ] }}"
+        },
+        "query": "update bot.errors set notified = true where id = $1;\n"
+      },
+      "position": [
+        288,
+        -96
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    }
+  ],
+  "settings": {
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed"
+  },
+  "tags": []
+}

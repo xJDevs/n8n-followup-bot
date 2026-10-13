@@ -1,0 +1,207 @@
+{
+  "active": false,
+  "connections": {
+    "Build File": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Upload To Bucket",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Daily 10:00": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Sends",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Sends": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build File",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Upload To Bucket": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Mark Backup",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Notify Failure",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "description": null,
+  "id": "WfBackup00000001",
+  "isArchived": false,
+  "name": "Followup | Backup",
+  "nodes": [
+    {
+      "id": "bk-trigger",
+      "name": "Daily 10:00",
+      "notes": "10:00 and not the small hours: the orchestrator sends at 9:00 and finishes within minutes, so the keys written today leave Supabase within the hour. And the 11:30 daily watch gets to report whether this worked THE SAME DAY. See design B-A. STAYS DISABLED until the group 9 Go/No-Go.",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "position": [
+        -624,
+        0
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "bk-read",
+      "name": "Read Sends",
+      "notes": "READ ONLY. Each row comes out as jsonb so the microseconds of the dates are not lost (fix 2026-09-10, design B-F). Schema-qualified (bot.sends, never sends) because the node's 'schema' parameter only applies to table operations, not to raw SQL. alwaysOutputData so that an empty table still produces an item and the backup is not skipped silently.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "-- to_jsonb(e) and not select *: the n8n Postgres node turns every timestamptz\n-- into a JavaScript Date, which only goes down to milliseconds, and the backup\n-- lost the microseconds. Inside a jsonb the dates travel as ISO text, exact.\n-- And unlike a column list, a new column gets in on its own: an explicit\n-- list would leave it out of the backup without warning (design B-F).\nselect to_jsonb(e) as row\nfrom bot.sends e\norder by e.created_at, e.unique_key;"
+      },
+      "position": [
+        -400,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "id": "bk-build",
+      "name": "Build File",
+      "notes": "Returns ONE item with the file in binary.data. If the Code node failed because of Buffer, the alternative is a Convert to File node.",
+      "parameters": {
+        "jsCode": "// THE ENVELOPE (design V-A). This Code node runs ONCE for all items, so it\n// collapses the N rows of 'Read Sends' into ONE single item. Without this, every row\n// would trigger its own upload and its own alert.\n// Each item carries the whole row as jsonb in 'row' (see the Read Sends\n// query): that way dates arrive as text with microseconds, without going through Date.\nconst rows = $input.all().map(i => i.json.row).filter(f => f && Object.keys(f).length);\n\nconst now  = DateTime.now().setZone('America/Costa_Rica');\nconst date = now.toFormat('yyyy-MM-dd');\n\nconst file_name  = `sends_${date}.json`;\nconst object_key = `sends/${file_name}`;\n\n// The row count goes INSIDE the file, not only in the name: it is what makes the\n// restore verifiable without having to remember how many there were (design B-A, and\n// rule 6 of the backup protocol).\nconst content = JSON.stringify({\n  generated_at: now.toISO(),\n  table: 'bot.sends',\n  rows: rows.length,\n  columns: rows.length ? Object.keys(rows[0]) : [],\n  data: rows,\n}, null, 2);\n\n// JSON and not CSV: CSV cannot tell null from an empty string -and a null sent_at\n// MEANS something (design V-C)- and it forces escaping commas inside error_message,\n// which is the kind of bug this project has already paid for twice.\nreturn [{\n  json: {\n    file_name,\n    object_key,\n    rows: rows.length,\n    generated_at: now.toISO(),\n    mark: `${now.toISO()} | ${rows.length} | ${object_key}`,\n  },\n  binary: {\n    data: {\n      data: Buffer.from(content, 'utf8').toString('base64'),\n      mimeType: 'application/json',\n      fileName: file_name,\n    },\n  },\n}];\n"
+      },
+      "position": [
+        -176,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "s3": {
+          "id": "CREDENTIAL_ID_5",
+          "name": "S3 | Backups"
+        }
+      },
+      "id": "bk-upload",
+      "name": "Upload To Bucket",
+      "notes": "S3 backup credential assigned on 2026-09-10. The endpoint needs an EXPLICIT https://: B2 shows it without a scheme and pasting it as-is fails with 'HTTP(S) Scheme is required in endpoint definition' (design B-H). The error output (main[1]) goes to the alert, not to a node that discards it. No delete node, on purpose: design B-C.",
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "additionalFields": {},
+        "bucketName": "your-backup-bucket",
+        "fileName": "={{ $json.object_key }}",
+        "operation": "upload"
+      },
+      "position": [
+        48,
+        0
+      ],
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1
+    },
+    {
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "bk-mark",
+      "name": "Mark Backup",
+      "notes": "THE ONLY WRITE IN THE WHOLE CHANGE, and it does not touch bot.sends (design B-E). It is the evidence the daily watch reads: if this mark is older than 24 h or missing, the report alerts. That way 'the backup did not run' becomes visible the next day instead of never. queryReplacement as an ARRAY (debt 5.13).",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ [ $('Build File').item.json.mark ] }}"
+        },
+        "query": "insert into bot.config (name, value)\nvalues ('last_backup', $1)\non conflict (name) do update set value = excluded.value;"
+      },
+      "position": [
+        288,
+        -96
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Telegram"
+        }
+      },
+      "id": "bk-alert",
+      "name": "Notify Failure",
+      "notes": "INV-15: EXPLICIT parse_mode HTML and & < > escaped. Omitting it does not disable parsing -n8n sends Markdown anyway- and a provider error with an odd number of underscores would kill the alert with a 400, right when it is needed.",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ ('BACKUP FAILED\\n\\nThe bot.sends backup could not be uploaded to the bucket.\\n\\nError: ' + ($json.error?.message ?? $json.error ?? 'no detail') + '\\n\\nThe last_backup mark was NOT updated, so the daily watch will report it tomorrow as well.').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }}"
+      },
+      "position": [
+        288,
+        128
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "waitBetweenTries": 5000,
+      "webhookId": "00000000-0000-4000-8000-000000000005"
+    }
+  ],
+  "settings": {
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "WfErrorManager01",
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Costa_Rica"
+  },
+  "tags": []
+}

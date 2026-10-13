@@ -1,0 +1,93 @@
+{
+  "active": false,
+  "connections": {
+    "Pick Date": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Download From B2",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run Manually": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Pick Date",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "description": null,
+  "id": "WfBackupConsole1",
+  "isArchived": false,
+  "name": "Followup | Backup Console",
+  "nodes": [
+    {
+      "id": "rc-trigger",
+      "name": "Run Manually",
+      "notes": "MANUAL console to look at a backup, same as SQL Console and YCloud Console. No schedule. It cannot send a WhatsApp message or touch the database: it only READS a file from B2. Decided on 2026-09-10, design B-I.",
+      "parameters": {},
+      "position": [
+        -440,
+        0
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "id": "rc-date",
+      "name": "Pick Date",
+      "notes": "The only place to edit: the DATE constant.",
+      "parameters": {
+        "jsCode": "// Write the date of the backup you want to download, in YYYY-MM-DD format.\n// If you leave it empty, it downloads TODAY's.\nconst DATE = '';\n\nconst date = DATE.trim()\n  || DateTime.now().setZone('America/Costa_Rica').toFormat('yyyy-MM-dd');\n\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {\n  throw new Error(`Invalid date: \"${date}\". It has to be YYYY-MM-DD, for example 2026-09-10.`);\n}\n\nreturn [{ json: { date, object_key: `sends/sends_${date}.json` } }];\n"
+      },
+      "position": [
+        -220,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "s3": {
+          "id": "CREDENTIAL_ID_5",
+          "name": "S3 | Backups"
+        }
+      },
+      "id": "rc-download",
+      "name": "Download From B2",
+      "notes": "READ ONLY. The file shows up in this node's output with a download button. Through the API it downloads decrypted; the B2 web panel will not let you download it because it has SSE-B2 (design B-H). This execution is NOT saved (saveManualExecutions false): it is visible while open and leaves no copy of the table in the n8n database.",
+      "parameters": {
+        "binaryPropertyName": "data",
+        "bucketName": "your-backup-bucket",
+        "fileKey": "={{ $json.object_key }}",
+        "operation": "download",
+        "resource": "file"
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1
+    }
+  ],
+  "settings": {
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "timezone": "America/Costa_Rica"
+  },
+  "tags": []
+}

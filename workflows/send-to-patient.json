@@ -1,0 +1,558 @@
+{
+  "active": false,
+  "connections": {
+    "Build Message": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Claim Key",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Claim Key": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Claimed?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Claimed?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Send",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Notify Existing Key",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Classify Failure": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Record Result",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Input": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build Message",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Needs Alert?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Write Alert",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Output",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Notify": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Output",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Notify Existing Key": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Exit Without Sending",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Read Response": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Record Result",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Record Result": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Needs Alert?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Send": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Read Response",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Classify Failure",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Write Alert": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Notify",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "description": null,
+  "id": "WfSendToPatient1",
+  "isArchived": false,
+  "name": "Followup | Send To Patient",
+  "nodes": [
+    {
+      "id": "sp-input",
+      "name": "Input",
+      "notes": "Frozen contract (design S-F). Renaming a field here migrates ALL callers in the same change. typeVersion 1.1 and not 1.2: the MCP catalog offers 1.2 but this instance does not have it installed and the node showed up as 'Install this node to use it'. 1.1 already supports inputSource workflowInputs.",
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "unique_key"
+            },
+            {
+              "name": "patient_id"
+            },
+            {
+              "name": "last_name"
+            },
+            {
+              "name": "phone"
+            },
+            {
+              "name": "milestone"
+            },
+            {
+              "name": "template"
+            },
+            {
+              "name": "params",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "position": [
+        -1120,
+        0
+      ],
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1
+    },
+    {
+      "id": "sp-build",
+      "name": "Build Message",
+      "notes": "S-E: validates and builds BEFORE claiming. Blowing up here writes no key; blowing up later burns the patient.",
+      "parameters": {
+        "jsCode": "// Validates the contract BEFORE touching the database (S-E). A mis-mapped field has to\n// blow up here: if it blows up after the key is claimed, the patient is burned forever\n// by INV-1 and can only be recovered by deleting the row by hand.\nconst e = $input.first().json ?? {};\n\nconst key      = String(e.unique_key ?? '').trim();\nconst template = String(e.template   ?? '').trim();\nconst phone    = String(e.phone      ?? '').trim();\n\nif (!key)      throw new Error('Broken contract: empty unique_key');\nif (!template) throw new Error(`Broken contract: empty template (key ${key})`);\n\n// E.164: '+' and 8 to 15 digits. If it does not look like one, we do not guess (spec 4.5).\nif (!/^\\+[1-9]\\d{7,14}$/.test(phone)) {\n  throw new Error(`Phone is not E.164: \"${phone}\" (key ${key})`);\n}\n\nconst params = Array.isArray(e.params) ? e.params : [];\n\nconst request_body = {\n  from: '+15555550199',            // the clinic's business number, confirmed 2026-09-05 (task 1.5)\n  to: phone,\n  type: 'template',\n  externalId: key,                 // comes back inside the delivery webhook (INV-5, spec 8)\n  template: {\n    name: template,\n    language: { code: 'es', policy: 'deterministic' },  // all three templates are 'es' (task 1.1)\n    components: params.length\n      ? [{ type: 'body', parameters: params.map((v) => ({ type: 'text', text: String(v) })) }]\n      : [],\n  },\n};\n\n// The input is returned too, so the next node's INSERT can read it from $json.\nreturn [{ json: { ...e, request_body } }];"
+      },
+      "position": [
+        -896,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "sp-claim",
+      "name": "Claim Key",
+      "notes": "INV-3: atomic claim. NO onError on purpose: if the INSERT fails the workflow has to crash (INV-2).",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ [ $json.unique_key, $json.patient_id, $json.last_name, $json.phone, $json.milestone, $json.template ] }}"
+        },
+        "query": "insert into bot.sends\n  (unique_key, patient_id, last_name, phone, milestone, template, status)\nvalues ($1, $2, $3, $4, $5, $6, 'pending')\non conflict (unique_key) do nothing\nreturning unique_key;"
+      },
+      "position": [
+        -688,
+        0
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "id": "sp-if-claimed",
+      "name": "Claimed?",
+      "notes": "typeValidation loose on purpose: with alwaysOutputData the 'already existed' case arrives as {} and unique_key is undefined. In strict mode that throws an error instead of taking the false branch.",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-claimed",
+              "leftValue": "={{ $json.unique_key }}",
+              "operator": {
+                "operation": "notEmpty",
+                "singleValue": true,
+                "type": "string"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "position": [
+        -464,
+        0
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Telegram"
+        }
+      },
+      "id": "sp-notify-existing",
+      "name": "Notify Existing Key",
+      "notes": "INV-15: no parse_mode. Keys carry underscores and an unbalanced Markdown kills the alert with a 400. | INV-15 (corrected 2026-09-08): parse_mode has NO 'None' option and omitting it does NOT disable parsing - n8n sends Markdown anyway, and a key with an odd number of underscores kills the alert with a 400. HTML is set explicitly and & < > are escaped in every interpolation.",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=KEY ALREADY EXISTED - nothing was sent\n\nKey: {{ String($('Input').item.json.unique_key).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }}\nPatient: {{ String($('Input').item.json.last_name).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }} (milestone {{ String($('Input').item.json.milestone).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }})\n\nThe orchestrator's existing-keys filter let through a candidate who was already contacted. Check that filter. Nothing was sent."
+      },
+      "position": [
+        -240,
+        192
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "waitBetweenTries": 5000,
+      "webhookId": "00000000-0000-4000-8000-000000000006"
+    },
+    {
+      "id": "sp-exit-no-send",
+      "name": "Exit Without Sending",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "ok",
+              "type": "boolean",
+              "value": false
+            },
+            {
+              "id": "s2",
+              "name": "status",
+              "type": "string",
+              "value": "preexisting"
+            },
+            {
+              "id": "s3",
+              "name": "unique_key",
+              "type": "string",
+              "value": "={{ $('Input').item.json.unique_key }}"
+            },
+            {
+              "id": "s4",
+              "name": "reason",
+              "type": "string",
+              "value": "the key already existed; nothing was sent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "position": [
+        -16,
+        192
+      ],
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CREDENTIAL_ID_2",
+          "name": "YCloud API"
+        }
+      },
+      "id": "sp-send",
+      "name": "Send",
+      "notes": "INV-4: retryOnFail FALSE - the endpoint accepts no idempotency key, so retrying means duplicating. neverError off: with it ON, 4xx responses would leave through the success branch and be marked 'sent' for a message that never went out. YCloud API credential plugged in on 2026-09-06: from then on this node CAN send real WhatsApp messages.",
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "jsonBody": "={{ JSON.stringify($('Build Message').item.json.request_body) }}",
+        "method": "POST",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://api.ycloud.com/v2/whatsapp/messages/sendDirectly"
+      },
+      "position": [
+        -240,
+        -96
+      ],
+      "retryOnFail": false,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3
+    },
+    {
+      "id": "sp-read-resp",
+      "name": "Read Response",
+      "parameters": {
+        "jsCode": "// A 2xx is NOT enough to write 'sent' (S-D). sendDirectly can answer 200\n// with status 'failed': the message was rejected and the 2xx only means \"I understood you\".\nconst r = $input.first().json ?? {};\nconst failed = (r.status ?? '') === 'failed';\n\nreturn [{ json: {\n  status:        failed ? 'failed' : 'sent',\n  wamid:         String(r.wamid ?? ''),          // the wamid, and only the wamid\n  ycloud_id:     String(r.id ?? ''),             // YCloud's own id: GET /v2/whatsapp/messages/{id}\n  error_code:    failed ? String(r.errorCode ?? 'NO_CODE') : '',\n  error_message: failed ? String(r.errorMessage ?? 'no detail').slice(0, 500) : '',\n}}];"
+      },
+      "position": [
+        0,
+        -224
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "sp-classify",
+      "name": "Classify Failure",
+      "notes": "INV-5. A 502 goes to ambiguous, not to failed: nobody claimed the message did not go out.",
+      "parameters": {
+        "jsCode": "// The question is not \"did it fail?\" but \"did someone CLAIM it did not go out?\" (S-D).\n//   4xx     -> explicit, deliberate rejection -> 'failed'\n//   5xx     -> the intermediary does not know -> 'ambiguous'\n//   nothing -> timeout, DNS, dropped link    -> 'ambiguous'\n// Never retried from here: that would be INV-4 in reverse.\nconst e = $input.first().json ?? {};\nconst err = e.error ?? e;\n\n// The shape of the error item changes between versions: read it defensively.\nconst raw = err.httpCode ?? err.statusCode ?? err.status ?? err.code ?? null;\nconst code = Number(raw);\nconst isRejection = Number.isFinite(code) && code >= 400 && code <= 499;\n\nconst detail = err.description ?? err.message ?? e.message ?? 'no detail';\n\nreturn [{ json: {\n  status:        isRejection ? 'failed' : 'ambiguous',\n  wamid:         '',\n  ycloud_id:     '',\n  error_code:    String(raw ?? 'NO_RESPONSE'),\n  error_message: String(detail).slice(0, 500),\n}}];"
+      },
+      "position": [
+        0,
+        32
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_1",
+          "name": "Supabase - n8n_bot"
+        }
+      },
+      "id": "sp-record",
+      "name": "Record Result",
+      "notes": "S-G: the AND status='pending' prevents overwriting a 'delivered' that the webhook already wrote. INV-9: 'delivered' is never written here. queryReplacement goes as an ARRAY, not as a comma-separated list: with commas, an empty value is dropped and shifts the positions, and a comma inside error_message would split the value in two. | 2026-09-08: ycloud_id as $6 (at the end, so the existing positions do not shift). The delivery webhook also writes it, with coalesce.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ [ $('Input').item.json.unique_key, $json.status, $json.wamid, $json.error_code, $json.error_message, $json.ycloud_id ] }}"
+        },
+        "query": "update bot.sends\n   set status        = $2,\n       wamid         = coalesce(nullif($3, ''), wamid),\n       ycloud_id     = coalesce(nullif($6, ''), ycloud_id),\n       error_code    = nullif($4, ''),\n       error_message = nullif($5, ''),\n       sent_at       = case when $2 = 'sent' then now() else sent_at end,\n       closed_at     = case when $2 = 'failed' then now() else closed_at end\n where unique_key = $1\n   and status = 'pending'\nreturning status, error_code, error_message;"
+      },
+      "position": [
+        240,
+        -96
+      ],
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6
+    },
+    {
+      "id": "sp-if-alert",
+      "name": "Needs Alert?",
+      "notes": "A single condition covers failed, ambiguous and the zero-rows case (where status comes back empty and is not 'sent' either).",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-alert",
+              "leftValue": "={{ $json.status }}",
+              "operator": {
+                "operation": "notEquals",
+                "type": "string"
+              },
+              "rightValue": "sent"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "position": [
+        464,
+        -96
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "id": "sp-write-alert",
+      "name": "Write Alert",
+      "parameters": {
+        "jsCode": "const r = $input.first().json ?? {};\nconst e = $('Input').item.json;\nconst status = r.status ?? '';\n\nconst when = DateTime.now().setZone('America/Costa_Rica').toFormat('dd/MM/yyyy HH:mm');\n\n// No asterisks or underscores: the Telegram node was meant to run without parse_mode (INV-15),\n// and keys carry underscores that would break an unbalanced Markdown.\nconst whatToDo = status === 'ambiguous'\n  ? 'Do NOT resend. The delivery webhook may close it on its own. If it is still like this when the 12 h expire, a human decides.'\n  : status === 'failed'\n    ? 'Do NOT resend. The key is already written and blocks the retry. To contact the patient again, the row has to be deleted by hand.'\n    : 'The UPDATE touched no rows: someone else moved the record, or the row is missing. Check the row in bot.sends.';\n\nconst text =\n  `SEND NOT CONFIRMED - ${status || 'no record'}\\n\\n` +\n  `When: ${when}\\n` +\n  `Patient: ${e.last_name} (milestone ${e.milestone})\\n` +\n  `Key: ${e.unique_key}\\n` +\n  (r.error_code    ? `Code: ${r.error_code}\\n`      : '') +\n  (r.error_message ? `Detail: ${r.error_message}\\n` : '') +\n  `\\n${whatToDo}`;\n\nreturn [{ json: { status, text } }];"
+      },
+      "position": [
+        688,
+        -224
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID_4",
+          "name": "Telegram"
+        }
+      },
+      "id": "sp-notify",
+      "name": "Notify",
+      "notes": "INV-15: no parse_mode. retryOnFail YES: retrying an alert cannot duplicate a message to a patient. | INV-15 (corrected 2026-09-08): parse_mode has NO 'None' option and omitting it does NOT disable parsing - n8n sends Markdown anyway, and a key with an odd number of underscores kills the alert with a 400. HTML is set explicitly and & < > are escaped in every interpolation.",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        },
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ String($('Write Alert').item.json.text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') }}"
+      },
+      "position": [
+        912,
+        -224
+      ],
+      "retryOnFail": true,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "waitBetweenTries": 5000,
+      "webhookId": "00000000-0000-4000-8000-000000000007"
+    },
+    {
+      "id": "sp-output",
+      "name": "Output",
+      "notes": "Return contract that the orchestrator reads for the daily summary.",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "o1",
+              "name": "ok",
+              "type": "boolean",
+              "value": "={{ $('Record Result').item.json.status === 'sent' }}"
+            },
+            {
+              "id": "o2",
+              "name": "status",
+              "type": "string",
+              "value": "={{ $('Record Result').item.json.status ?? 'no_record' }}"
+            },
+            {
+              "id": "o3",
+              "name": "unique_key",
+              "type": "string",
+              "value": "={{ $('Input').item.json.unique_key }}"
+            },
+            {
+              "id": "o4",
+              "name": "reason",
+              "type": "string",
+              "value": "={{ $('Record Result').item.json.error_message ?? '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "position": [
+        1120,
+        -80
+      ],
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4
+    }
+  ],
+  "settings": {
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "WfErrorManager01",
+    "executionOrder": "v1",
+    "executionTimeout": 120,
+    "saveManualExecutions": true,
+    "timezone": "America/Costa_Rica"
+  },
+  "tags": []
+}
