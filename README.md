@@ -28,13 +28,13 @@ Delivery is sacrificed before risking a duplicate. Everything below follows from
 ```mermaid
 flowchart LR
     subgraph n8n
-        SCH([Schedule 09:00]) --> BOT[Followup &#124; Bot<br/>orchestrator]
-        BOT -->|one patient<br/>per call| SEND[Followup &#124; Send To Patient<br/>the only sender]
-        TEST([Manual]) --> TS[Followup &#124; Test Send] --> SEND
-        HOOK[Followup &#124; Delivery Webhook]
-        BK([Schedule 10:00]) --> BACKUP[Followup &#124; Backup]
-        WT([Schedule 11:30]) --> WATCH[Followup &#124; Daily Watch]
-        ERR[Followup &#124; Error Manager]
+        SCH([Schedule 09:00]) --> BOT["Followup | Bot<br/>orchestrator"]
+        BOT -->|one patient<br/>per call| SEND["Followup | Send To Patient<br/>the only sender"]
+        TEST([Manual]) --> TS["Followup | Test Send"] --> SEND
+        HOOK["Followup | Delivery Webhook"]
+        BK([Schedule 10:00]) --> BACKUP["Followup | Backup"]
+        WT([Schedule 11:30]) --> WATCH["Followup | Daily Watch"]
+        ERR["Followup | Error Manager"]
     end
 
     APP[(Clinic app API<br/>patients)] --> BOT
